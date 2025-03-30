@@ -22,7 +22,7 @@ from src.utils.render_utils import *
 from src.utils.misc_utils import *
 from src.utils.camera_view_utils import load_camera_params
 
-from src.gt_video_utils.gt_cam_loader import readCamerasFromAllData
+from src.gt_video_utils.gt_cam_loader import readCamerasFromAllData,  group_cameras_by_time
 
 def init_training(cfg, args=None):
     
@@ -98,6 +98,9 @@ def main(cfg, args=None):
     #set camera infos of training dataset
     
     camera_infos = readCamerasFromAllData(args.gt_video_folder, True)
+    
+    fid_to_cams, sorted_fids = group_cameras_by_time(camera_infos)
+    
 
     # init training
     torch_device, export_path, writer = init_training(cfg, args)
@@ -259,6 +262,85 @@ def main(cfg, args=None):
             e_cat, p_cat = init_e_cat, init_p_cat
 
     time_skip = mpm_model.time
+    
+    print(time_skip)
+    
+    
+    
+    for epoch in range(start_epoch, epochs):
+        
+        # recover ckpt status to the skip stage
+        x_ckpt = x.detach()
+        v_ckpt = v.detach()
+        C_ckpt = C.detach()
+        F_ckpt = F.detach()
+        time_ckpt = time_skip
+        
+        for fid in tqdm(sorted_fids, desc=f'Fid {fid}'):
+            cams = fid_to_cams[fid]
+            
+            if train_params.enable_train:
+                # init optimizer
+                material_opt.zero_grad()
+                
+            x = x_ckpt.detach().requires_grad_(requires_grad)
+            v = v_ckpt.detach().requires_grad_(requires_grad)
+            C = C_ckpt.detach().requires_grad_(requires_grad)
+            F = F_ckpt.detach().requires_grad_(requires_grad)
+            mpm_model.time = time_ckpt
+            
+            trans_pos = trans_pos.detach().requires_grad_(requires_grad)
+            trans_cov = trans_cov.detach().requires_grad_(requires_grad)
+            trans_shs = trans_shs.detach().requires_grad_(requires_grad)
+            trans_opacity = trans_opacity.detach().requires_grad_(requires_grad)
+            trans_features = trans_features.detach().requires_grad_(requires_grad)
+            
+            for i in unselected_params:
+                if unselected_params[i] is not None:
+                    unselected_params[i] = unselected_params[i].detach()
+            scale_origin = scale_origin.detach()
+            original_mean_pos = original_mean_pos.detach()
+            screen_points = screen_points.detach()
+            assert x.requires_grad == requires_grad
+            
+            if material_params.elasticity == 'neural' or material_params.plasticity == 'neural':
+                # extract feature
+                e_cat, p_cat = material(trans_pos, trans_features)
+            else:
+                e_cat, p_cat = init_e_cat, init_p_cat
+                
+            
+            
+            
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     for epoch in range(start_epoch, epochs):
         
@@ -465,7 +547,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--gt_video_folder", 
         type=str, 
-        default='./data/bird', 
+        default='/home/qingran/Desktop/gic/data/pacnerf/bird', 
         help="Path to the ground truth video data folder."
     )
 

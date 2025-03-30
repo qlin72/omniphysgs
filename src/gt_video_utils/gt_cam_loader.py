@@ -5,7 +5,7 @@ import math
 import json
 from PIL import Image
 from pathlib import Path
-import tqdm
+from tqdm import tqdm
 
 
 class CameraInfo(NamedTuple):
@@ -82,5 +82,13 @@ def readCamerasFromAllData(path, white_background):
                                         ))
 
     return cam_infos
+
+def group_cameras_by_time(camera_infos):
+    from collections import defaultdict
+    fid_to_cams = defaultdict(list)
+    for cam in camera_infos:
+        fid_to_cams[cam.fid].append(cam)
+    sorted_fids = sorted(fid_to_cams.keys())
+    return fid_to_cams, sorted_fids
 
 
