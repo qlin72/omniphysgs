@@ -23,6 +23,7 @@ from src.utils.misc_utils import *
 from src.utils.camera_view_utils import load_camera_params
 
 from src.gt_video_utils.gt_cam_loader import readCamerasFromAllData,  group_cameras_by_time
+from src.gt_video_utils.loss import l1_loss, ssim
 
 def init_training(cfg, args=None):
     
@@ -308,7 +309,8 @@ def main(cfg, args=None):
                 e_cat, p_cat = material(trans_pos, trans_features)
             else:
                 e_cat, p_cat = init_e_cat, init_p_cat
-                
+            
+            loss = torch.tensor(0.0, device='cuda')                 
             for cam in cams:
                 
                 # render
@@ -339,8 +341,14 @@ def main(cfg, args=None):
                     logits=None
                 )
                 
+                lambda_dssim = 0.2
                 
-                
+                # Loss
+                gt_image = cam.original_image.cuda()
+                Ll1 = l1_loss(rendering, gt_image)
+                loss = loss + (1.0 - lambda_dssim) * Ll1 + lambda_dssim * (1.0 - ssim(rendering, gt_image)) 
+            
+            loss.backward()        
                 
             
             
