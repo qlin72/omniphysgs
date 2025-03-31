@@ -309,6 +309,37 @@ def main(cfg, args=None):
             else:
                 e_cat, p_cat = init_e_cat, init_p_cat
                 
+            for cam in cams:
+                
+                # render
+                frame_id = cam.uid
+                
+                # get rendering params
+                (
+                    render_pos,
+                    render_cov,
+                    render_shs,
+                    render_opacity,
+                    render_rot
+                ) = get_mpm_gaussian_params(
+                    pos=x, cov=trans_cov, shs=trans_shs, opacity=trans_opacity,
+                    F=F,
+                    unselected_params=unselected_params,
+                    rotation_matrices=rotation_matrices,
+                    scale_origin=scale_origin,
+                    original_mean_pos=original_mean_pos
+                )
+                
+                rendering = render_mpm_gaussian_with_gt_camera_info(
+                    pipeline=pipeline,
+                    gaussians=gaussians,background=background, 
+                     pos=render_pos, cov=render_cov,shs=render_shs, opacity=render_opacity, rot=render_rot,
+                    screen_points=screen_points,
+                    cam_info = cam,
+                    logits=None
+                )
+                
+                
             
             
             

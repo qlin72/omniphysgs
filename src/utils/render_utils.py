@@ -11,6 +11,7 @@ import copy
 from tqdm import tqdm
 import imageio
 
+from gt_video_utils.gt_cam_loader import loadCam
 from .camera_view_utils import get_camera_view
 from .transformation_utils import *
 from .filling_utils import *
@@ -346,6 +347,40 @@ def render_mpm_gaussian(
                     delta_e=render_params.delta_e,
                     delta_r=render_params.delta_r,
                 )
+    rasterize = initialize_resterize(
+        current_camera, gaussians, pipeline, background
+    )
+    if logits is None:
+        colors_precomp = convert_SH(shs, current_camera, gaussians, pos, rot)
+    else:
+        vis = torch.softmax(logits, dim=1)
+        vis = vis[:, 1] - vis[:, 0]
+        vis = (vis - vis.min()) / (vis.max() - vis.min())
+        rgb1 = torch.tensor([255,0,0], device='cuda').float() / 255
+        rgb2 = torch.tensor([0,0,255], device='cuda').float() / 255
+        colors_precomp = interpolate_rgb(rgb1, rgb2, vis.unsqueeze(1))
+        
+    rendering, raddi = rasterize(
+        means3D=pos,
+        means2D=screen_points,
+        shs=None,
+        colors_precomp=colors_precomp,
+        opacities=opacity,
+        scales=None,
+        rotations=None,
+        cov3D_precomp=cov,
+    )
+    return rendering
+
+def render_mpm_gaussian_with_gt_camera_info(
+        pipeline,
+        gaussians, background, 
+        pos, cov, shs, opacity, rot,
+        screen_points,
+        camera_info,
+        logits=None
+    ):
+    current_camera = loadCam(camera_info,1.0)
     rasterize = initialize_resterize(
         current_camera, gaussians, pipeline, background
     )
