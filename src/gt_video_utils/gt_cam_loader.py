@@ -7,6 +7,8 @@ from PIL import Image
 from pathlib import Path
 from tqdm import tqdm
 import torch
+import sys
+sys.path.append("third_party/gaussian-splatting")
 from scene.cameras import Camera
 
 
