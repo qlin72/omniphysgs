@@ -65,6 +65,7 @@ def readCamerasFromAllData(path, white_background):
 
             intrinsic = frame['intrinsic']
             ori_h, ori_w = image.size[0], image.size[1]
+            # print("ori_h:", ori_h,"ori_w:", ori_w)
             fovy = focal2fov(intrinsic[1][1], ori_h)
             fovx = focal2fov(intrinsic[0][0], ori_w)
             FovY = fovx
@@ -72,6 +73,7 @@ def readCamerasFromAllData(path, white_background):
             if ori_w != 800:
                 image = image.resize((800, 800), Image.BILINEAR)
                 if white_background:
+                    print("white_background")
                     mask = (np.asarray(image).astype(int).sum(-1, keepdims=True) != 255 * 3).astype(float)
                 else:
                     mask = (np.asarray(image).astype(int).sum(-1, keepdims=True) != 0).astype(float)
@@ -135,8 +137,8 @@ def loadCam(cam_info, resolution_scale):
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY,
                   image=gt_image, gt_alpha_mask=loaded_mask,
                   image_name=cam_info.image_name, uid=cam_info.uid,
-                  data_device='cuda', fid=cam_info.fid,
-                  depth=cam_info.depth)
+                  data_device='cuda')
+
     
 def PILtoTorch(pil_image, resolution):
     resized_image_PIL = pil_image.resize(resolution)

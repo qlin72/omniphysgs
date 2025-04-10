@@ -11,7 +11,7 @@ import copy
 from tqdm import tqdm
 import imageio
 
-from gt_video_utils.gt_cam_loader import loadCam
+from src.gt_video_utils.gt_cam_loader import loadCam
 from .camera_view_utils import get_camera_view
 from .transformation_utils import *
 from .filling_utils import *
@@ -307,6 +307,19 @@ def export_rendering(rendering, step, folder, height = None, width = None):
         os.path.join(folder, f"{step}.png".rjust(8, "0")),
         255 * cv2_img,
     )
+    
+def export_rendering_abs_path(rendering, path, height = None, width = None):
+
+    cv2_img = rendering.permute(1, 2, 0).detach().cpu().numpy()
+    cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+    if height is None or width is None:
+        height = cv2_img.shape[0] // 2 * 2
+        width = cv2_img.shape[1] // 2 * 2
+    cv2.imwrite(
+        path,
+        255 * cv2_img,
+    )    
+
 
 def save_video(folder, output_filename, start=0, end=9999, fps=30):
     
