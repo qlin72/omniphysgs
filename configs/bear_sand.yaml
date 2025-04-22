@@ -26,17 +26,17 @@ model:
   group_size: 32
 
 material:
-  center: [0.5, 0.5, 0.5]
+  # center: [0.5, 0.5, 0.5]
   size: [1.0, 1.0, 1.0]
   rho: 1000.0
   elasticity_physicals:
     - 'CorotatedElasticity'
-    - 'StVKElasticity'
+    # - 'StVKElasticity'
     # - 'SigmaElasticity'
     # - 'VolumeElasticity'
   plasticity_physicals:
     - 'IdentityPlasticity'
-    - 'DruckerPragerPlasticity'
+    # - 'DruckerPragerPlasticity'
     # - 'SigmaPlasticity'
     # - 'VonMisesPlasticity'
     # For saving GPU memory. May need to balance label when uncommenting. 

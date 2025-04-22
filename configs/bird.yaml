@@ -7,7 +7,7 @@ train:
   epochs: 10
   internal_epochs: 30
   enable_train: True
-  learning_rate: 5e-5
+  learning_rate: 0.00005
   lambda_l1: 0.1
   ckpt_interval: 1
   ckpt_epoch: -1
@@ -22,16 +22,16 @@ model:
   depth: 0 # do not use attention
   num_heads: 8
   mlp_ratio: 2
-  num_groups: 8192
-  group_size: 32
+  num_groups: 4096
+  group_size: 16
 
 material:
-  center: [0.5, 0.5, 0.5]
+  # center: [0.5, 0.5, 0.5]
   size: [1.0, 1.0, 1.0]
   rho: 1000.0
   elasticity_physicals:
     - 'CorotatedElasticity'
-    - 'StVKElasticity'
+    # - 'StVKElasticity'
     # - 'SigmaElasticity'
     # - 'VolumeElasticity'
   plasticity_physicals:
@@ -45,7 +45,7 @@ material:
 
 render:
   white_bg: False
-  mpm_space_vertical_upward_axis: [0, 0, 1]
+  mpm_space_vertical_upward_axis: [0, 1, 0]
   mpm_space_viewpoint_center: [0.8, 0.7, 0.7]
   default_camera_index: -1
   show_hint: False
@@ -77,7 +77,7 @@ sim:
   damping: 1.0
   boundary_conditions: 
     - type: 'surface_collider'
-      point: [0.0, 0.0, 0.0]
+      point: [0.0, 0.001, 0.0]
       normal: [0.0, 1.0, 0.0]
       surface: 'collide'
       friction: 0.0
