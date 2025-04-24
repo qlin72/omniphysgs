@@ -97,6 +97,15 @@ def group_cameras_by_time(camera_infos):
     sorted_fids = sorted(fid_to_cams.keys())
     return fid_to_cams, sorted_fids
 
+def split_cams_test_train_cams(camera_infos, test_uid):
+    test_cams = []
+    train_cams = []
+    for cam in camera_infos:
+        if cam.uid == test_uid:
+            test_cams.append(cam)
+        else:
+            train_cams.append(cam)
+    return test_cams, train_cams
 
 def loadCam(cam_info, resolution_scale):
     orig_w, orig_h = cam_info.image.size

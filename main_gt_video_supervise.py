@@ -106,12 +106,6 @@ def main(cfg, args=None):
     # init training
     torch_device, export_path, writer = init_training(cfg, args)
     
-    # if train_params.enable_train:
-    #     # score distillation sampling
-    #     print("Loading guidance and prompt processor...")
-    #     guidance = ModelscopeGuidance(guidance_params)
-    #     prompt_utils = ModelscopePromptProcessor(prompt_params)()
-    #     print()
     
     # init gaussians
     print("Initializing gaussian scene and pre-processing...")
@@ -208,7 +202,6 @@ def main(cfg, args=None):
     
     start_epoch = 0
     epochs = train_params.epochs
-    internal_epochs = train_params.internal_epochs
     num_skip_frames = sim_params.num_skip_frames
     num_frames = sim_params.num_frames
     frames_per_stage = sim_params.frames_per_stage
@@ -216,29 +209,29 @@ def main(cfg, args=None):
     num_stages = (num_frames - num_skip_frames) // frames_per_stage
     steps_per_frame = sim_params.steps_per_frame
     
-    material_opt = torch.optim.Adam(material.parameters(), lr=train_params.learning_rate)
-    # if train_params.enable_train:
-    #     material_opt = torch.optim.Adam(material.parameters(), lr=train_params.learning_rate)
-    #     start_epoch = load_material_checkpoint(
-    #         material,
-    #         material_optimizer=material_opt,
-    #         ckpt_dir=os.path.join(export_path, 'checkpoints'),
-    #         epoch=train_params.ckpt_epoch,
-    #         device=torch_device
-    #     )
-    #     print(f'\nStart training with\n{elasticity.name()}\n{plasticity.name()}')
-    #     print(f'The prompt is: {train_params.prompt}\n')
-    # else:
-    #     epochs = 1
-    #     internal_epochs = 1
-    #     load_material_checkpoint(
-    #         material,
-    #         ckpt_dir=os.path.join(export_path, 'checkpoints'),
-    #         epoch=train_params.ckpt_epoch,
-    #         device=torch_device,
-    #     )
-    #     print('\nTraining is disabled.')
-    #     print(f'Setting epochs to 1 and start rendering with\n{elasticity.name()}\n{plasticity.name()}\n')
+    # material_opt = torch.optim.Adam(material.parameters(), lr=train_params.learning_rate)
+    if train_params.enable_train:
+        material_opt = torch.optim.Adam(material.parameters(), lr=train_params.learning_rate)
+        start_epoch = load_material_checkpoint(
+            material,
+            material_optimizer=material_opt,
+            ckpt_dir=os.path.join(export_path, 'checkpoints'),
+            epoch=train_params.ckpt_epoch,
+            device=torch_device
+        )
+        print(f'\nStart training with\n{elasticity.name()}\n{plasticity.name()}')
+        print(f'The prompt is: {train_params.prompt}\n')
+    else:
+        epochs = 1
+        internal_epochs = 1
+        load_material_checkpoint(
+            material,
+            ckpt_dir=os.path.join(export_path, 'checkpoints'),
+            epoch=train_params.ckpt_epoch,
+            device=torch_device,
+        )
+        print('\nTraining is disabled.')
+        print(f'Setting epochs to 1 and start rendering with\n{elasticity.name()}\n{plasticity.name()}\n')
 
     # init params
     requires_grad = train_params.enable_train
@@ -252,6 +245,7 @@ def main(cfg, args=None):
     C_ini = C_ini.requires_grad_(False)
     F_ini = F_ini.requires_grad_(False)
 
+    
     # skip first few frames to accelerate training
     # this frames are meaningless when there is no contact or collision
     with torch.no_grad():
@@ -275,8 +269,8 @@ def main(cfg, args=None):
     
    
     
-    # for epoch in range(start_epoch, epochs):
-    for epoch in range(0, 100):
+    for epoch in range(start_epoch, epochs):
+    # for epoch in range(0, 100):
         
        
         
@@ -302,22 +296,26 @@ def main(cfg, args=None):
         F = F_ckpt.detach().requires_grad_(requires_grad)
         
         # init optimizer
-        material_opt.zero_grad()
-        
-        loss = torch.tensor(0.0, device='cuda')
+        if train_params.enable_train:
+            
+            material_opt.zero_grad()
+            
+            loss = torch.tensor(0.0, device='cuda')
         
         cam_count = 0
                 
         rand_num = np.random.randint(0, 11)
         
-        save_gt_image = False
-        
-        if not os.path.isdir(export_path + '/images/' + 'gt_' + str(rand_num)):
-                    
-                
-            os.makedirs(export_path + '/images/' + 'gt_' + str(rand_num))
+        if train_params.enable_train:
+             
+            save_gt_image = False
             
-            save_gt_image = True
+            if not os.path.isdir(export_path + '/images/' + 'gt_' + str(rand_num)):
+                        
+                    
+                os.makedirs(export_path + '/images/' + 'gt_' + str(rand_num))
+                
+                save_gt_image = True
             
         
         
@@ -368,7 +366,7 @@ def main(cfg, args=None):
             
             
             cams_selected = [cam for cam in cams 
-             if int(cam.image_name.split('_')[1]) == rand_num]
+            if int(cam.image_name.split('_')[1]) == rand_num]
             
             # for cam in cams:                
             # for cam in random.sample(cams, k=1):
@@ -408,29 +406,30 @@ def main(cfg, args=None):
                 )
                 # if(epoch == 9):
                     
-                
-                os.makedirs(export_path + '/images/' + str(epoch), exist_ok=True)
-    
-                
-                export_rendering_abs_path(rendering,export_path +'/images/'+ str(epoch) + '/' + cam.image_name +'.png')
-                
-                lambda_dssim = 0.9
-                
-                # Loss
-                
-                gt_image = cur_cam.original_image
-                # if(epoch == 9):
-                if(save_gt_image):
-                    export_rendering_abs_path(gt_image,export_path + '/images/' + 'gt_' + str(rand_num) + '/' + cam.image_name +'.png')
-                
-                
-                
-                if(idx > 6):
-                
-                
-                    Ll1 = l1_loss(rendering, gt_image)
-                    loss = loss + (1.0 - lambda_dssim) * Ll1 + lambda_dssim * (1.0 - ssim(rendering, gt_image)) 
-                    cam_count = cam_count + 1
+                if train_params.enable_train:
+                    
+                    os.makedirs(export_path + '/images/' + str(epoch), exist_ok=True)
+        
+                    
+                    export_rendering_abs_path(rendering,export_path +'/images/'+ str(epoch) + '/' + cam.image_name +'.png')
+                    
+                    lambda_dssim = 0.9
+                    
+                    # Loss
+                    
+                    gt_image = cur_cam.original_image
+                    # if(epoch == 9):
+                    if(save_gt_image):
+                        export_rendering_abs_path(gt_image,export_path + '/images/' + 'gt_' + str(rand_num) + '/' + cam.image_name +'.png')
+                    
+                    
+                    
+                    if(idx > 6):
+                    
+                    
+                        Ll1 = l1_loss(rendering, gt_image)
+                        loss = loss + (1.0 - lambda_dssim) * Ll1 + lambda_dssim * (1.0 - ssim(rendering, gt_image)) 
+                        cam_count = cam_count + 1
                 
             # mpm step
             for step in tqdm(range(round((next_fid-fid)/sim_params.dt)), leave=False):
@@ -454,35 +453,45 @@ def main(cfg, args=None):
             # if (idx+1) % 1 == 0 or idx == len(sorted_fids) - 1:
                 
             
-        loss = loss/cam_count
-        print("loss:",loss)
-        print("cam_count",cam_count)
-        loss.backward()
+        if train_params.enable_train:
         
-        # convert non-finite gradients to zero
-        
-        for p in material.parameters():
-            # print(material.parameters())
-            if p is not None and p.grad is not None:
-                torch.nan_to_num_(p.grad, 0.0, 0.0, 0.0)
-        torch.nn.utils.clip_grad_norm_(material.parameters(), 1.0)
-        material_opt.step()
-        
-        with open(os.path.join(export_path, 'log.txt'), 'a', encoding='utf-8') as f:
-            lr = material_opt.param_groups[0]['lr']
-            # f.write(f'epoch: {epoch}, idx: {idx}, loss: {loss}, lr: {lr}, e_cat: {e_cat.mean(dim=0).tolist()}, p_cat: {p_cat.mean(dim=0).tolist()}\n')
-            f.write(f'epoch: {epoch}, loss: {loss}, lr: {lr}, e_cat: {e_cat.mean(dim=0).tolist()}, p_cat: {p_cat.mean(dim=0).tolist()}\n')
-
-        save_video_by_last_idx(f'{export_path}/images/'+ str(epoch),f'{export_path}/videos/video_{epoch:04d}.mp4')
-        
-        if(save_gt_image):
-            save_video_by_last_idx(f'{export_path}' + '/images/' + 'gt_' + str(rand_num),f'{export_path}'+'/videos/gt_video_'+str(rand_num)+'.mp4')
-        # x_ckpt = x.detach()
-        # v_ckpt = v.detach()
-        # C_ckpt = C.detach()
-        # F_ckpt = F.detach()
-        # time_ckpt = mpm_model.time
+            loss = loss/cam_count
+            print("loss:",loss)
+            print("cam_count",cam_count)
+            loss.backward()
             
+            # convert non-finite gradients to zero
+            
+            for p in material.parameters():
+                # print(material.parameters())
+                if p is not None and p.grad is not None:
+                    torch.nan_to_num_(p.grad, 0.0, 0.0, 0.0)
+            torch.nn.utils.clip_grad_norm_(material.parameters(), 1.0)
+            material_opt.step()
+            
+            with open(os.path.join(export_path, 'log.txt'), 'a', encoding='utf-8') as f:
+                lr = material_opt.param_groups[0]['lr']
+                # f.write(f'epoch: {epoch}, idx: {idx}, loss: {loss}, lr: {lr}, e_cat: {e_cat.mean(dim=0).tolist()}, p_cat: {p_cat.mean(dim=0).tolist()}\n')
+                f.write(f'epoch: {epoch}, loss: {loss}, lr: {lr}, e_cat: {e_cat.mean(dim=0).tolist()}, p_cat: {p_cat.mean(dim=0).tolist()}\n')
+
+            save_video_by_last_idx(f'{export_path}/images/'+ str(epoch),f'{export_path}/videos/video_{epoch:04d}.mp4')
+            
+            if(save_gt_image):
+                save_video_by_last_idx(f'{export_path}' + '/images/' + 'gt_' + str(rand_num),f'{export_path}'+'/videos/gt_video_'+str(rand_num)+'.mp4')
+            # x_ckpt = x.detach()
+            # v_ckpt = v.detach()
+            # C_ckpt = C.detach()
+            # F_ckpt = F.detach()
+            # time_ckpt = mpm_model.time
+            
+            if epoch % 10 == 0:
+                save_material_checkpoint(
+                    material,
+                    material_opt,
+                    ckpt_dir=os.path.join(export_path, 'checkpoints'),
+                    epoch=epoch
+                )
+                
             
 
     
