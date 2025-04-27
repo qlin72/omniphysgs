@@ -22,8 +22,8 @@ from src.utils.render_utils import *
 from src.utils.misc_utils import *
 from src.utils.camera_view_utils import load_camera_params
 
-from src.gt_video_utils.gt_cam_loader import readCamerasFromAllData,  group_cameras_by_time
-from src.gt_video_utils.loss import l1_loss, ssim
+from src.gt_video_utils.gt_cam_loader import readCamerasFromAllData,  group_cameras_by_time, split_test_train_cams
+from src.gt_video_utils.loss import l1_loss, ssim, psnr
 
 def init_training(cfg, args=None):
     
@@ -100,7 +100,23 @@ def main(cfg, args=None):
     
     camera_infos = readCamerasFromAllData(args.gt_video_folder,False)
     
-    fid_to_cams, sorted_fids = group_cameras_by_time(camera_infos)
+    
+    test_camera_id = 10
+    
+    test_cams, train_cams = split_test_train_cams(camera_infos,test_camera_id)
+    
+    # fid_to_cams 
+    
+    # sorted_fids
+    
+    if(train_params.enable_train):
+        
+        fid_to_cams, sorted_fids = group_cameras_by_time(camera_infos)
+        
+    else:
+        
+        fid_to_cams, sorted_fids = group_cameras_by_time(test_cams)
+         
     
 
     # init training
@@ -227,7 +243,8 @@ def main(cfg, args=None):
         load_material_checkpoint(
             material,
             ckpt_dir=os.path.join(export_path, 'checkpoints'),
-            epoch=train_params.ckpt_epoch,
+            # epoch=train_params.ckpt_epoch,
+            epoch = 10,
             device=torch_device,
         )
         print('\nTraining is disabled.')
@@ -304,23 +321,17 @@ def main(cfg, args=None):
         
         cam_count = 0
                 
-        rand_num = np.random.randint(0, 11)
+        # rand_num = np.random.randint(0, 11)
         
-        if train_params.enable_train:
-             
-            save_gt_image = False
-            
-            if not os.path.isdir(export_path + '/images/' + 'gt_' + str(rand_num)):
-                        
-                    
-                os.makedirs(export_path + '/images/' + 'gt_' + str(rand_num))
+        
+        save_gt_image = True
                 
-                save_gt_image = True
+                
+        psnr_list = []
+        ssim_list = []
             
         
-        
-        
-        for idx in range(len(sorted_fids) - 1):
+        for idx in range(len(sorted_fids)):
             
             
             # if idx % 1 == 0:
@@ -328,7 +339,10 @@ def main(cfg, args=None):
             
             
             fid = sorted_fids[idx]
-            next_fid = sorted_fids[idx + 1]
+            if idx == len(sorted_fids) - 1:
+                next_fid = fid
+            else:
+                next_fid = sorted_fids[idx + 1]
             
             
             cams = fid_to_cams[fid]
@@ -365,12 +379,12 @@ def main(cfg, args=None):
             
             
             
-            cams_selected = [cam for cam in cams 
-            if int(cam.image_name.split('_')[1]) == rand_num]
+            # cams_selected = [cam for cam in cams 
+            # if int(cam.image_name.split('_')[1]) == rand_num]
             
             # for cam in cams:                
-            # for cam in random.sample(cams, k=1):
-            for cam in cams_selected:
+            for cam in random.sample(cams, k=1):
+            # for cam in cams_selected:
             # cam =  cams[7]
             # print(cam.image)
             
@@ -405,7 +419,8 @@ def main(cfg, args=None):
                     logits=None
                 )
                 # if(epoch == 9):
-                    
+                gt_image = cur_cam.original_image   
+                cam_count = cam_count + 1
                 if train_params.enable_train:
                     
                     os.makedirs(export_path + '/images/' + str(epoch), exist_ok=True)
@@ -417,10 +432,10 @@ def main(cfg, args=None):
                     
                     # Loss
                     
-                    gt_image = cur_cam.original_image
+                    
                     # if(epoch == 9):
                     if(save_gt_image):
-                        export_rendering_abs_path(gt_image,export_path + '/images/' + 'gt_' + str(rand_num) + '/' + cam.image_name +'.png')
+                        export_rendering_abs_path(gt_image,export_path + '/images/' + str(epoch) + '/' + 'gt_' + cam.image_name +'.png')
                     
                     
                     
@@ -429,7 +444,16 @@ def main(cfg, args=None):
                     
                         Ll1 = l1_loss(rendering, gt_image)
                         loss = loss + (1.0 - lambda_dssim) * Ll1 + lambda_dssim * (1.0 - ssim(rendering, gt_image)) 
-                        cam_count = cam_count + 1
+                        
+                
+                else:
+                    os.makedirs(export_path + '/images/eval_' + str(cam.uid), exist_ok=True)
+                    os.makedirs(export_path + '/images/eval_gt_' + str(cam.uid), exist_ok=True)
+                    export_rendering_abs_path(rendering,export_path +'/images/eval_' + str(cam.uid) + '/' + cam.image_name +'.png')
+                    export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
+                    psnr_list.append(psnr(rendering, gt_image))
+                    ssim_list.append(ssim(rendering, gt_image))
+                    
                 
             # mpm step
             for step in tqdm(range(round((next_fid-fid)/sim_params.dt)), leave=False):
@@ -474,23 +498,35 @@ def main(cfg, args=None):
                 # f.write(f'epoch: {epoch}, idx: {idx}, loss: {loss}, lr: {lr}, e_cat: {e_cat.mean(dim=0).tolist()}, p_cat: {p_cat.mean(dim=0).tolist()}\n')
                 f.write(f'epoch: {epoch}, loss: {loss}, lr: {lr}, e_cat: {e_cat.mean(dim=0).tolist()}, p_cat: {p_cat.mean(dim=0).tolist()}\n')
 
-            save_video_by_last_idx(f'{export_path}/images/'+ str(epoch),f'{export_path}/videos/video_{epoch:04d}.mp4')
+            # save_video_by_last_idx(f'{export_path}/images/'+ str(epoch),f'{export_path}/videos/video_{epoch:04d}.mp4')
             
-            if(save_gt_image):
-                save_video_by_last_idx(f'{export_path}' + '/images/' + 'gt_' + str(rand_num),f'{export_path}'+'/videos/gt_video_'+str(rand_num)+'.mp4')
+            # if(save_gt_image):
+            #     save_video_by_last_idx(f'{export_path}' + '/images/' + 'gt_' + str(rand_num),f'{export_path}'+'/videos/gt_video_'+str(rand_num)+'.mp4')
+            
             # x_ckpt = x.detach()
             # v_ckpt = v.detach()
             # C_ckpt = C.detach()
             # F_ckpt = F.detach()
             # time_ckpt = mpm_model.time
             
-            if epoch % 10 == 0:
+            if (epoch+1) % 10 == 0 or epoch == 0:
                 save_material_checkpoint(
                     material,
                     material_opt,
                     ckpt_dir=os.path.join(export_path, 'checkpoints'),
                     epoch=epoch
                 )
+        else:
+            
+            save_video_by_last_idx(f'{export_path}'+'/images/eval_' + str(test_camera_id),f'{export_path}'+'/videos/video_'+str(test_camera_id)+'.mp4')
+            
+           
+            save_video_by_last_idx(f'{export_path}'+'/images/eval_gt_'+ str(test_camera_id),f'{export_path}'+'/videos/gt_video_'+str(test_camera_id)+'.mp4')
+            
+            mean_psnr = torch.mean(torch.stack(psnr_list))
+            mean_ssim = torch.mean(torch.stack(ssim_list)) 
+            print(f'average psnr: {mean_psnr}')
+            print(f'average ssim: {mean_ssim}')
                 
             
 

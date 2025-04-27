@@ -31,7 +31,7 @@ class MPMModel:
         self.n_particles: int = init_pos.shape[0]
         self.init_pos: Tensor = init_pos.detach()
         
-        self.center: np.ndarray = np.array(material_params['center'])
+        # self.center: np.ndarray = np.array(material_params['center'])
         self.size: np.ndarray = np.array(material_params['size'])
         self.vol: float = np.prod(self.size) / self.n_particles
         self.p_mass: float = material_params['rho'] * self.vol  # TODO: the mass can be non-constant.

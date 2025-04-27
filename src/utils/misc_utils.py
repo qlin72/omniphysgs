@@ -148,7 +148,12 @@ def load_material_checkpoint(
         print(f"No checkpoint found in {ckpt_dir}, starting from scratch")
         return 0
 
-    epoch = epoch or max([int(f[6:]) for f in model_files])  # load the latest checkpoint by default
+    if epoch is not None:
+        epoch = epoch 
+    else:
+        epoch = max([int(f[6:]) for f in model_files]) 
+    # epoch = epoch or max([int(f[6:]) for f in model_files])  # load the latest checkpoint by default
+    print('epoch:',epoch)
     checkpoint_path = os.path.join(ckpt_dir, f"epoch_{epoch:04d}.pth")
     if not os.path.exists(checkpoint_path):  # checkpoint file not found
         if eval:

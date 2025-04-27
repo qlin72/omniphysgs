@@ -97,7 +97,7 @@ def group_cameras_by_time(camera_infos):
     sorted_fids = sorted(fid_to_cams.keys())
     return fid_to_cams, sorted_fids
 
-def split_cams_test_train_cams(camera_infos, test_uid):
+def split_test_train_cams(camera_infos, test_uid):
     test_cams = []
     train_cams = []
     for cam in camera_infos:
@@ -141,6 +141,8 @@ def loadCam(cam_info, resolution_scale):
         alpha = Image.fromarray((cam_info.alpha[..., 0] * 255).astype(np.uint8)).resize(resolution)
         alpha = np.asarray(alpha).astype(float) / 255
         loaded_mask = alpha[None]
+        
+    loaded_mask = torch.from_numpy(loaded_mask)
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T,
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY,

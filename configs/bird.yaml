@@ -4,7 +4,7 @@ train:
   model_path: 'dataset/bird'
   export_path: './outputs'
   train_tag: 
-  epochs: 10
+  epochs: 100
   internal_epochs: 30
   enable_train: True
   learning_rate: 0.00005
@@ -31,7 +31,7 @@ material:
   rho: 1000.0
   elasticity_physicals:
     - 'CorotatedElasticity'
-    # - 'StVKElasticity'
+    - 'StVKElasticity'
     # - 'SigmaElasticity'
     # - 'VolumeElasticity'
   plasticity_physicals:
