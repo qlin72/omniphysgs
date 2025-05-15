@@ -23,7 +23,7 @@ from src.utils.misc_utils import *
 from src.utils.camera_view_utils import load_camera_params
 
 from src.gt_video_utils.gt_cam_loader import readCamerasFromAllData,  group_cameras_by_time, split_test_train_cams
-from src.gt_video_utils.loss import l1_loss, ssim, psnr
+from src.gt_video_utils.loss import *
 
 def init_training(cfg, args=None):
     
@@ -33,10 +33,11 @@ def init_training(cfg, args=None):
         cfg.train.train_tag = time.strftime("%Y%m%d_%H_%M_%S")
     export_path = os.path.join(export_path, cfg.train.train_tag)
     if os.path.exists(export_path):
-        if args is not None and not args.overwrite:
-            overwrite = input(f'Warning: export path {export_path} already exists. Exit?(y/n)')
-            if overwrite.lower() == 'y':
-                exit()
+        # if args is not None and not args.overwrite:
+        #     overwrite = input(f'Warning: export path {export_path} already exists. Exit?(y/n)')
+        #     if overwrite.lower() == 'y':
+        #         exit()
+        print(f'Warning: export path {export_path} already exists')
     else:
         os.makedirs(export_path)
         os.makedirs(os.path.join(export_path, 'images'))
@@ -148,6 +149,7 @@ def main(cfg, args=None):
     
     # get preprocessed gaussian params
     trans_pos = mpm_params['pos']
+    print("trans_pos:",trans_pos)
     trans_cov = mpm_params['cov']
     trans_opacity = mpm_params['opacity']
     trans_shs = mpm_params['shs']
@@ -244,7 +246,7 @@ def main(cfg, args=None):
             material,
             ckpt_dir=os.path.join(export_path, 'checkpoints'),
             # epoch=train_params.ckpt_epoch,
-            epoch = 10,
+            epoch = 29,
             device=torch_device,
         )
         print('\nTraining is disabled.')
@@ -283,7 +285,7 @@ def main(cfg, args=None):
     print(sorted_fids)
 
     
-    
+    gt_pcds = load_gt_pcds(args.gt_ply_folder)
    
     
     for epoch in range(start_epoch, epochs):
@@ -329,6 +331,13 @@ def main(cfg, args=None):
                 
         psnr_list = []
         ssim_list = []
+        
+        
+        
+        # for pcd in gt_pcds:
+        #     print(pcd.shape)
+        
+        pred_pcds = []
             
         
         for idx in range(len(sorted_fids)):
@@ -418,9 +427,15 @@ def main(cfg, args=None):
                     camera_info = cam,
                     logits=None
                 )
+                # if not train_params.enable_train:
+                os.makedirs(export_path + '/plys', exist_ok=True)
+                particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
+                
+                pred_pcds.append(render_pos)
+                
                 # if(epoch == 9):
                 gt_image = cur_cam.original_image   
-                cam_count = cam_count + 1
+               
                 if train_params.enable_train:
                     
                     os.makedirs(export_path + '/images/' + str(epoch), exist_ok=True)
@@ -428,7 +443,7 @@ def main(cfg, args=None):
                     
                     export_rendering_abs_path(rendering,export_path +'/images/'+ str(epoch) + '/' + cam.image_name +'.png')
                     
-                    lambda_dssim = 0.9
+                    lambda_dssim = 0.6
                     
                     # Loss
                     
@@ -440,6 +455,8 @@ def main(cfg, args=None):
                     
                     
                     if(idx > 6):
+                        
+                        cam_count = cam_count + 1
                     
                     
                         Ll1 = l1_loss(rendering, gt_image)
@@ -453,6 +470,12 @@ def main(cfg, args=None):
                     export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
                     psnr_list.append(psnr(rendering, gt_image))
                     ssim_list.append(ssim(rendering, gt_image))
+                    
+                    # evaluate([render_pos], [gt_pcds[idx]], 'CD')
+                    # evaluate([render_pos], [gt_pcds[idx]], 'EMD')
+                    
+                    
+                    
                     
                 
             # mpm step
@@ -527,6 +550,24 @@ def main(cfg, args=None):
             mean_ssim = torch.mean(torch.stack(ssim_list)) 
             print(f'average psnr: {mean_psnr}')
             print(f'average ssim: {mean_ssim}')
+            
+            cd = evaluate(pred_pcds, gt_pcds, 'CD')
+            emd = evaluate(pred_pcds, gt_pcds, 'EMD')
+            
+            
+            test_log = {
+                "psnr": mean_psnr.item(),
+                "ssim": mean_ssim.item(),
+                "cd": cd,
+                "emd": emd
+            }
+
+            # 写入 test_log.json
+            with open(export_path + "/test_log.json", "w") as f:
+                json.dump(test_log, f, indent=4)
+
+            print("Test log saved to test_log.json")
+            
                 
             
 
@@ -554,6 +595,15 @@ if __name__ == '__main__':
         default='/workspace/omniphysgs/data/bird', 
         help="Path to the ground truth video data folder."
     )
+    
+    parser.add_argument(
+        "--gt_ply_folder", 
+        type=str, 
+        default='/workspace/bird', 
+        help="Path to the ground truth ply folder."
+    )
+    
+    
 
     parser.add_argument(
         "--test", 

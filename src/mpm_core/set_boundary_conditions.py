@@ -413,9 +413,14 @@ def add_surface_collider(
         point = torch.tensor(point, device=model.device).float()
         normal = torch.tensor(normal, device=model.device).float()
         normal = normal / torch.norm(normal)
+        # print("model.grid_x",model.grid_x)
+        # print( "model.dx", model.dx)
+        # print("point",point)
         offset = model.grid_x * model.dx - point
+        # print("offset",offset)
         dotproduct = torch.sum(offset * normal, dim=1)
-        target = dotproduct < 0.0
+        # print("dotproduct",dotproduct)
+        target = dotproduct <= 0.0
         
         def collide(
             model: MPMModel,

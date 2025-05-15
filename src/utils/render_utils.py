@@ -346,12 +346,8 @@ def save_video_by_last_idx(folder, output_filename, start=0, end=9999, fps=30):
     imageio.mimsave(output_filename, image, fps=fps)
     
 def sort_by_last_number(filenames):
-    """
-    按文件名中最后一个下划线后的数字（不含扩展名）从小到大排序。
-    假设格式像 "m_0_5.png"。
-    """
+    
     def last_num(fname):
-        # 先按最后一个 '_' 切分，再去掉扩展名，转成整数
         base = fname.rsplit('_', 1)[-1]      # "5.png"
         num_str = base.split('.', 1)[0]      # "5"
         return int(num_str)

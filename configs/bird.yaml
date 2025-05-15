@@ -4,7 +4,7 @@ train:
   model_path: 'dataset/bird'
   export_path: './outputs'
   train_tag: 
-  epochs: 100
+  epochs: 200
   internal_epochs: 30
   enable_train: True
   learning_rate: 0.00005
@@ -77,7 +77,7 @@ sim:
   damping: 1.0
   boundary_conditions: 
     - type: 'surface_collider'
-      point: [0.0, 0.001, 0.0]
+      point: [0.0, 0.041, 0.0]
       normal: [0.0, 1.0, 0.0]
       surface: 'collide'
       friction: 0.0

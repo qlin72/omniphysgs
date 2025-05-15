@@ -1,0 +1,1 @@
+python main_gt_video_supervise.py --config configs/bird.yaml --tag bird --gt_video_folder /workspace/omniphysgs/data/bird --gt_ply_folder /workspace/bird  --test

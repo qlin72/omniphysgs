@@ -2,6 +2,13 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from math import exp
+from pytorch3d.loss import chamfer_distance
+import os
+import trimesh as tm
+import numpy as np
+from tqdm.autonotebook import tqdm
+import random
+import scipy
 
 
 def l1_loss(network_output, gt):
@@ -61,3 +68,100 @@ def mse(img1, img2):
 def psnr(img1, img2):
     mse = (((img1 - img2)) ** 2).view(img1.shape[0], -1).mean(1, keepdim=True)
     return 20 * torch.log10(1.0 / torch.sqrt(mse))
+
+def load_gt_pcds(path):
+    gts = []
+    indices = [ply.split('.')[0] for ply in os.listdir(path)]
+    print(indices)
+    indices.sort()
+    n_digits = len(indices[0])
+    indices = [int(idx) for idx in indices if idx.strip() != '']
+    indices.sort()
+    for idx in range(len(indices)):
+        print(os.path.join(path, f"{idx:0{n_digits}d}.ply"))
+        if not os.path.exists(os.path.join(path, f"{idx:0{n_digits}d}.ply")):
+            print("跳过，文件不存在")
+            continue
+        pcd = tm.load(os.path.join(path, f"{idx:0{n_digits}d}.ply"), process=False)
+        print(pcd.vertices)
+        np_pcd = np.array(pcd.vertices)
+        gts.append(torch.from_numpy(np_pcd).to('cuda',dtype=torch.float32).contiguous())
+    return gts
+
+
+
+def evaluate(preds, gts, loss_type='CD'):
+    # print(f"Prediction sequence {len(preds)}, gts sequence {len(gts)}")
+    # if len(preds) != len(gts):
+    #     print("[Error]: The prediction sequence is not align with the gt sequence.")
+    #     return
+    # print(f"Prediction pcd particles cnt {preds[0].shape[0]}, gt pcd particles cnt {gts[0].shape[0]}")
+    max_f = len(preds)
+    fit_loss = 0.0
+    predict_loss = 0.0
+    for f in tqdm(range(max_f), desc=f"Evaluate {loss_type} Loss"):
+        # pcd1 = discretize(preds[f], 0.02)
+        # pcd2 = discretize(gts[f], 0.02)
+        # cd = chamfer_distance(preds[f], gts[f])
+        # print(f"frames: {f}, cd: {cd}")
+
+        # cd align with https://zlicheng.com/spring_gaus/
+        n_sample = 2048 if loss_type == 'EMD' else 8192
+        pcd0 = preds[f]
+        pcd1 = gts[f]
+        
+        n_sample = min(n_sample, pcd0.shape[0], pcd1.shape[0])
+
+        pcd0 = pcd0[random.sample(range(pcd0.shape[0]), n_sample), :]
+        pcd1 = pcd1[random.sample(range(pcd1.shape[0]), n_sample), :]
+        
+        print("pcd0",pcd0.shape)
+        print("pcd1",pcd1.shape)
+
+        if loss_type == "CD":
+            loss = (chamfer_distance(pcd0[None], pcd1[None])[0] * 1e3).item()
+            # loss = (chamfer_distance(pcd0[None], pcd1[None])[0]).item()
+        elif loss_type == "EMD":
+            loss = emd_func(pcd0, pcd1).item()
+        else:
+            print("[Error]: undefined error type.")
+        
+        fit_loss+= loss
+
+    fit_loss /= max_f
+    print(f"{loss_type} loss train: {fit_loss}")
+    return fit_loss
+
+
+def emd_func(x, y, pkg="torch"):
+    if pkg == "numpy":
+        # numpy implementation
+        x_ = np.repeat(np.expand_dims(x, axis=1), y.shape[0], axis=1)  # x: [N, M, D]
+        y_ = np.repeat(np.expand_dims(y, axis=0), x.shape[0], axis=0)  # y: [N, M, D]
+        cost_matrix = np.linalg.norm(x_ - y_, 2, axis=2)
+        try:
+            ind1, ind2 = scipy.optimize.linear_sum_assignment(
+                cost_matrix, maximize=False
+            )
+        except:
+            # pdb.set_trace()
+            print("Error in linear sum assignment!")
+
+        emd = np.mean(np.linalg.norm(x[ind1] - y[ind2], 2, axis=1))
+    else:
+        # torch implementation
+        x_ = x[:, None, :].repeat(1, y.size(0), 1)  # x: [N, M, D]
+        y_ = y[None, :, :].repeat(x.size(0), 1, 1)  # y: [N, M, D]
+        dis = torch.norm(torch.add(x_, -y_), 2, dim=2)  # dis: [N, M]
+        cost_matrix = dis.detach().cpu().numpy()
+        try:
+            ind1, ind2 = scipy.optimize.linear_sum_assignment(
+                cost_matrix, maximize=False
+            )
+        except:
+            # pdb.set_trace()
+            print("Error in linear sum assignment!")
+
+        emd = torch.mean(torch.norm(torch.add(x[ind1], -y[ind2]), 2, dim=1))
+
+    return emd

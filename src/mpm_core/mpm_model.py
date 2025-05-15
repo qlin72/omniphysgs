@@ -76,6 +76,7 @@ class MPMModel:
         
         # calculate temporary variables for both p2g and g2p (weight, dpos, index)
         px = x * inv_dx
+        # print(px)
         base = (px - 0.5).long() # (n_particles, 3)
         fx = px - base.float() # (n_particles, 3)
         
@@ -143,10 +144,14 @@ class MPMModel:
         new_F = dt * new_F.sum(dim=1) # (n_particles, 3, 3)
         
         x = x + v * dt
+        # min_y = x[:, 1].min().item()
+        # print(f"[t={self.time+dt:.4f}] min y = {min_y:.6f}")
         x = x.clamp(clip_bound, 1.0 - clip_bound)
         F = F + torch.bmm(new_F, F)
         F = F.clamp(-2.0, 2.0)
         self.time += dt
+        # min_y = x[:, 1].min().item()
+        # print(f"[t={self.time+dt:.4f}] min y = {min_y:.6f}")
         
         return x, v, C, F
     
