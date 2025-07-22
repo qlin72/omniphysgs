@@ -1,0 +1,1 @@
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_13.yaml --tag dataset_45_13 --gt_video_folder /data/dataset_45_new_small/13

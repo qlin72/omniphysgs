@@ -70,7 +70,7 @@ def init_training(cfg, args=None):
     torch_device = torch.device(device)
     torch.cuda.set_device(cfg.train.gpu)
     torch.backends.cudnn.benchmark = False
-    print(f'\nusing device: {device}\n')
+    print(f'\n using device: {device}\n')
     
     # export config
     print(f'exporting to: {export_path}\n')
@@ -285,7 +285,7 @@ def main(cfg, args=None):
     print(sorted_fids)
 
     
-    gt_pcds = load_gt_pcds(args.gt_ply_folder)
+    # gt_pcds = load_gt_pcds(args.gt_ply_folder)
    
     
     for epoch in range(start_epoch, epochs):
@@ -310,8 +310,10 @@ def main(cfg, args=None):
         
         
         x = x_ckpt.detach().requires_grad_(requires_grad)
-        v = v_ckpt.detach().requires_grad_(requires_grad)
-        C = C_ckpt.detach().requires_grad_(requires_grad)
+        # v = v_ckpt.detach().requires_grad_(requires_grad)
+        v = v_ckpt.detach().requires_grad_(False)
+        # C = C_ckpt.detach().requires_grad_(requires_grad)
+        C = C_ckpt.detach().requires_grad_(False)
         F = F_ckpt.detach().requires_grad_(requires_grad)
         
         # init optimizer
@@ -551,15 +553,15 @@ def main(cfg, args=None):
             print(f'average psnr: {mean_psnr}')
             print(f'average ssim: {mean_ssim}')
             
-            cd = evaluate(pred_pcds, gt_pcds, 'CD')
-            emd = evaluate(pred_pcds, gt_pcds, 'EMD')
+            # cd = evaluate(pred_pcds, gt_pcds, 'CD')
+            # emd = evaluate(pred_pcds, gt_pcds, 'EMD')
             
             
             test_log = {
                 "psnr": mean_psnr.item(),
                 "ssim": mean_ssim.item(),
-                "cd": cd,
-                "emd": emd
+                # "cd": cd,
+                # "emd": emd
             }
 
             # 写入 test_log.json
@@ -592,7 +594,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--gt_video_folder", 
         type=str, 
-        default='/workspace/omniphysgs/data/bird', 
+        default='/home/qingran/Desktop/omniphysgs/data/bird', 
         help="Path to the ground truth video data folder."
     )
     

@@ -57,7 +57,7 @@ def readCamerasFromAllData(path, white_background):
             frame_time = frame['time']
             
             c2w = frame["c2w"]
-            c2w.append([0.0, 0.0, 0.0, 1.0])
+            # c2w.append([0.0, 0.0, 0.0, 1.0])
             matrix = np.linalg.inv(np.array(c2w))
             R = -np.transpose(matrix[:3, :3])
             R[:, 0] = -R[:, 0]

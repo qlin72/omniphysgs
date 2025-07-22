@@ -17,13 +17,17 @@ def angle2vector(angle):
     return torch.tensor([torch.cos(angle), torch.sin(angle), 0], device="cuda")
 
 def transform2origin(position_tensor, factor=0.95):
-    min_pos = torch.min(position_tensor, 0)[0]
-    max_pos = torch.max(position_tensor, 0)[0]
-    max_diff = torch.max(max_pos - min_pos)
-    original_mean_pos = (min_pos + max_pos) / 2.0
-    scale = factor / max_diff # set to 0.95 to avoid numerical issue on the boundary
-    original_mean_pos = original_mean_pos.to(device="cuda")
-    scale = scale.to(device="cuda")
+    # min_pos = torch.min(position_tensor, 0)[0]
+    # max_pos = torch.max(position_tensor, 0)[0]
+    # max_diff = torch.max(max_pos - min_pos)
+    # original_mean_pos = (min_pos + max_pos) / 2.0
+    # scale = factor / max_diff # set to 0.95 to avoid numerical issue on the boundary
+    # original_mean_pos = original_mean_pos.to(device="cuda")
+    # scale = scale.to(device="cuda")
+    
+    scale = torch.tensor(1.0, device="cuda")
+    original_mean_pos = torch.tensor([0.0, 0.4, 0.0], device="cuda")
+    
     new_position_tensor = (position_tensor - original_mean_pos) * scale
     return new_position_tensor, scale, original_mean_pos
 
