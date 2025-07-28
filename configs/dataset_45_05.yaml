@@ -1,23 +1,23 @@
 train:
   seed: 0
   gpu: 0
-  model_path: 'dataset/dataset_45_new/13'
+  model_path: 'dataset/dataset_45_new/05'
   export_path: './outputs'
-  train_tag:
+  train_tag: 
   epochs: 100
   internal_epochs: 30
-  enable_train: true
+  enable_train: True
   learning_rate: 0.00005
   lambda_l1: 0.1
   ckpt_interval: 1
   ckpt_epoch: -1
-  export_video: true
+  export_video: True
   video_interval: 1
   prompt: "a rubber bear bouncing on a surface"
 
 model:
   network: 'knn'
-  normalize_features: true
+  normalize_features: True
   hidden_size: 768
   depth: 0 # do not use attention
   num_heads: 8
@@ -30,29 +30,29 @@ material:
   size: [1.0, 1.0, 1.0]
   rho: 1000.0
   elasticity_physicals:
-  - 'CorotatedElasticity'
-  - 'StVKElasticity'
-  - 'SigmaElasticity'
-  - 'VolumeElasticity'
+    - 'CorotatedElasticity'
+    - 'StVKElasticity'
+    - 'SigmaElasticity'
+    - 'VolumeElasticity'
   plasticity_physicals:
-  - 'IdentityPlasticity'
-  - 'DruckerPragerPlasticity'
-  - 'SigmaPlasticity'
-  - 'VonMisesPlasticity'
+    - 'IdentityPlasticity'
+    - 'DruckerPragerPlasticity'
+    - 'SigmaPlasticity'
+    - 'VonMisesPlasticity'
     # For saving GPU memory. May need to balance label when uncommenting. 
   elasticity: 'neural'
   plasticity: 'neural'
 
 render:
-  white_bg: false
+  white_bg: False
   mpm_space_vertical_upward_axis: [0, 1, 0]
   mpm_space_viewpoint_center: [0.8, 0.7, 0.7]
   default_camera_index: -1
-  show_hint: false
+  show_hint: False
   init_azimuthm: 170
   init_elevation: 0
   init_radius: 1.6
-  move_camera: false
+  move_camera: False
   delta_a: -2.4
   delta_e: 0.8
   delta_r: 0.0
@@ -62,8 +62,8 @@ preprocessing:
   opacity_threshold: 0.0
   rotation_degree: [0.0]
   rotation_axis: [0]
-  sim_area:
-  particle_filling:
+  sim_area: 
+  particle_filling: 
 
 sim:
   num_grids: 24
@@ -75,11 +75,11 @@ sim:
   steps_per_frame: 10
   clip_bound: 0.5
   damping: 1.0
-  boundary_conditions:
-  - type: 'surface_collider'
-    point: [0.0, 0.22, 0.0]
-    normal: [0.0, 1.0, 0.0]
-    surface: 'sticky'
-    friction: 0.0
-    start_time: 0.0
-    end_time: 1e3
+  boundary_conditions: 
+    - type: 'surface_collider'
+      point: [0.0, 0.22, 0.0]
+      normal: [0.0, 1.0, 0.0]
+      surface: 'collide'
+      friction: 0.0
+      start_time: 0.0
+      end_time: 1e3

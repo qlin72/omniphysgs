@@ -1,7 +1,7 @@
 train:
   seed: 0
   gpu: 0
-  model_path: 'dataset/dataset_45_new/13'
+  model_path: 'dataset/dataset_45_new/06'
   export_path: './outputs'
   train_tag:
   epochs: 100
@@ -79,7 +79,7 @@ sim:
   - type: 'surface_collider'
     point: [0.0, 0.22, 0.0]
     normal: [0.0, 1.0, 0.0]
-    surface: 'sticky'
+    surface: 'collide'
     friction: 0.0
     start_time: 0.0
     end_time: 1e3

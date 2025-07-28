@@ -1,7 +1,7 @@
 train:
   seed: 0
   gpu: 0
-  model_path: 'dataset/dataset_45_new/13'
+  model_path: 'dataset/dataset_45_new/38'
   export_path: './outputs'
   train_tag:
   epochs: 100
