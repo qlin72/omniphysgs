@@ -8,9 +8,9 @@ def load_2objs_point_cloud_info(folder_path):
     输出: (num_pts1, num_pts2, velocity1, velocity2)
           每个为: int, int, np.ndarray(3,), np.ndarray(3,)
     """
-    pc_folder = os.path.join(folder_path, "point_clouds")
-    file1 = os.path.join(pc_folder, "sampled_obj1_with_velocity.ply")
-    file2 = os.path.join(pc_folder, "sampled_obj2_with_velocity.ply")
+    
+    file1 = os.path.join(folder_path, "sampled_obj1_with_velocity.ply")
+    file2 = os.path.join(folder_path, "sampled_obj2_with_velocity.ply")
 
     # 定义速度坐标变换矩阵
     # 将 [x, y, z] → [x, z, -y]

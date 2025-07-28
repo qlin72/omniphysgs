@@ -438,7 +438,7 @@ def add_surface_collider(
                     model.grid_mv[target] = model.grid_mv[target] - normal * torch.sum(model.grid_mv[target] * normal, dim=1, keepdim=True)
                 elif surface == "collide":
                     # set the vertical velocity to be opposite
-                    model.grid_mv[target] = model.grid_mv[target] - normal * 2.0 * torch.sum(model.grid_mv[target] * normal, dim=1, keepdim=True)
+                    model.grid_mv[target] = model.grid_mv[target] - normal * 2 * torch.sum(model.grid_mv[target] * normal, dim=1, keepdim=True)
                 else:
                     raise TypeError("Undefined surface type")
         model.post_grid_process.append(

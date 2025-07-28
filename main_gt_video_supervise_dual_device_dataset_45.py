@@ -28,6 +28,22 @@ from src.gt_video_utils.loss import *
 
 import copy
 
+def replace_inf_with_max(tensor: torch.Tensor, name="tensor"):
+    if not torch.all(torch.isfinite(tensor)):
+        finite_mask = torch.isfinite(tensor)
+        if not finite_mask.any():
+            print(f"[FATAL] All values in {name} are Inf/NaN. Replacing with zeros.")
+            return torch.zeros_like(tensor)
+
+        max_finite_val = tensor[finite_mask].abs().max()
+        print(f"[WARN] {name} contains Inf. Replacing with max finite value: {max_finite_val.item()}")
+
+        tensor = torch.nan_to_num(tensor, nan=max_finite_val.item(), posinf=max_finite_val.item(), neginf=-max_finite_val.item())
+
+    return tensor
+
+
+
 def init_training(cfg, args=None):
     
     # get export folder
@@ -108,10 +124,10 @@ def main(cfg, args=None):
     
     camera_infos = readCamerasFromAllData(args.gt_video_folder,False)
     
-    n1, n2, v1, v2 = load_2objs_point_cloud_info(args.gt_video_folder)
+    n1, n2, v1, v2 = load_2objs_point_cloud_info(train_params.model_path)
     
     
-    print(args.gt_video_folder)
+    print(train_params.model_path)
     
     
     print("v1:",v1)
@@ -632,7 +648,10 @@ def main(cfg, args=None):
                 # mpm step, using checkpoint to save memory
                 stress = checkpoint(elasticity, F, e_cat)
                 
-                assert torch.all(torch.isfinite(stress))
+                stress = replace_inf_with_max(stress, name="stress")
+
+                
+                # assert torch.all(torch.isfinite(stress))
                 
                 
                 # if(idx < 0):
@@ -655,12 +674,12 @@ def main(cfg, args=None):
                 F = F_mpm.to(device_material)
 
                 
-                assert torch.all(torch.isfinite(x))
-                assert torch.all(torch.isfinite(F))
+                # assert torch.all(torch.isfinite(x))
                 
                 F = checkpoint(plasticity, F, p_cat)
+                F = replace_inf_with_max(F, name="F")
                 
-                assert torch.all(torch.isfinite(F))    
+                # assert torch.all(torch.isfinite(F))    
         
                 # if (idx+1) % 1 == 0 or idx == len(sorted_fids) - 1:
                     

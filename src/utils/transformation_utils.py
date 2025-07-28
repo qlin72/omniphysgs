@@ -25,8 +25,9 @@ def transform2origin(position_tensor, factor=0.95):
     # original_mean_pos = original_mean_pos.to(device="cuda")
     # scale = scale.to(device="cuda")
     
-    scale = torch.tensor(1.0, device="cuda")
-    original_mean_pos = torch.tensor([0.0, 0.4, 0.0], device="cuda")
+    
+    scale = torch.tensor(0.5, device="cuda")
+    original_mean_pos = torch.tensor([0.0, 0.5, 0.0], device="cuda")
     
     new_position_tensor = (position_tensor - original_mean_pos) * scale
     return new_position_tensor, scale, original_mean_pos
