@@ -640,18 +640,31 @@ def main(cfg, args=None):
                 # evaluate([render_pos], [gt_pcds[idx]], 'EMD')
                 
             
+            
+            def debug_tensor(name, t):
+                print(f"[DEBUG] {name} - shape: {t.shape}, dtype: {t.dtype}, device: {t.device}")
+                print(f"[DEBUG] {name} - min: {t.min().item():.6f}, max: {t.max().item():.6f}")
+                print(f"[DEBUG] {name} contains NaN: {torch.isnan(t).any().item()}, Inf: {torch.isinf(t).any().item()}")
+                print(f"[DEBUG] {name}.requires_grad: {t.requires_grad}")
+                        
+            
+            
+            
+            
+            
             # mpm step
             for step in tqdm(range(round((next_fid-fid)/sim_params.dt)), leave=False):
                 
                 # print("next_fid-fid:",next_fid-fid)
                 
                 # mpm step, using checkpoint to save memory
+                debug_tensor("F", F)
                 stress = checkpoint(elasticity, F, e_cat)
                 
-                stress = replace_inf_with_max(stress, name="stress")
+                # stress = replace_inf_with_max(stress, name="stress")
 
                 
-                # assert torch.all(torch.isfinite(stress))
+                assert torch.all(torch.isfinite(stress))
                 
                 
                 # if(idx < 0):
@@ -672,14 +685,27 @@ def main(cfg, args=None):
                 v = v_mpm.to(device_material)
                 C = C_mpm.to(device_material)
                 F = F_mpm.to(device_material)
+                
+                
+                debug_tensor("x", x)
+                debug_tensor("x_mpm", x_mpm)
+                
+                debug_tensor("v", v)
+                debug_tensor("v_mpm", v_mpm)
+                
+                debug_tensor("F", F)
+                debug_tensor("F_mpm", F_mpm)
+                
+                debug_tensor("stress", stress)
+                debug_tensor("stress_mpm", stress_mpm)
 
                 
                 # assert torch.all(torch.isfinite(x))
                 
                 F = checkpoint(plasticity, F, p_cat)
-                F = replace_inf_with_max(F, name="F")
+                # F = replace_inf_with_max(F, name="F")
                 
-                # assert torch.all(torch.isfinite(F))    
+                assert torch.all(torch.isfinite(F))    
         
                 # if (idx+1) % 1 == 0 or idx == len(sorted_fids) - 1:
                     
