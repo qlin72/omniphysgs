@@ -309,7 +309,7 @@ def main(cfg, args=None):
             material,
             ckpt_dir=os.path.join(export_path, 'checkpoints'),
             # epoch=train_params.ckpt_epoch,
-            epoch = 29,
+            epoch = 19,
             device=torch_device,
         )
         print('\nTraining is disabled.')
@@ -323,6 +323,7 @@ def main(cfg, args=None):
     v1_scaled = v1_expanded * vel_factor
     v2_scaled = v2_expanded * vel_factor
     v = torch.cat([v1_scaled, v2_scaled], dim=0)  # shape: (gs_num, 3)
+    # v = torch.cat([v1_expanded, v2_expanded], dim=0)  # shape: (gs_num, 3)
     C = torch.zeros((gs_num, 3, 3), device=torch_device)
     F = torch.eye(3, device=torch_device).unsqueeze(0).repeat(gs_num, 1, 1)
     
@@ -330,6 +331,24 @@ def main(cfg, args=None):
     v = v.requires_grad_(False)
     C = C.requires_grad_(False)
     F = F.requires_grad_(False)
+    
+    
+
+    # 初始化 e_cat 和 p_cat
+    init_e_cat = torch.zeros((n1 + n2, 2), device='cuda:0')  # (N, 2)
+    init_p_cat = torch.zeros((n1 + n2, 4), device='cuda:0')  # (N, 4)
+
+    # 给前 n1 个粒子赋值
+    init_e_cat[:n1, 0] = 1  # [1, 0]
+    # p_cat[:n1] = torch.tensor([1, 0, 0, 0], device='cuda:0')  ← 更高效写法如下：
+    init_p_cat[:n1, 0] = 1
+
+    # 给后 n2 个粒子赋值
+    init_e_cat[n1:, 1] = 1  # [0, 1]
+    init_p_cat[n1:, 1] = 1  # [0, 1, 0, 0]
+    
+    
+    
 
     
     # skip first few frames to accelerate training
@@ -501,6 +520,8 @@ def main(cfg, args=None):
             loss = torch.tensor(0.0, device='cuda')
         
         cam_count = 0
+        
+        total_weight = 0
                 
         # rand_num = np.random.randint(0, 11)
         
@@ -510,6 +531,7 @@ def main(cfg, args=None):
                 
         psnr_list = []
         ssim_list = []
+        Ll1_list = []
         
         
         
@@ -555,8 +577,14 @@ def main(cfg, args=None):
                 # print("this is neural")
                 # extract feature
                 e_cat, p_cat = material(trans_pos, trans_features)
+                # print("e_cat shape:", e_cat.shape)
+                # print("p_cat shape:", p_cat.shape)
+                # print("e_cat[0]:", e_cat[0])
+                # print("p_cat[0]:", p_cat[0])
             else:
                 e_cat, p_cat = init_e_cat, init_p_cat
+                
+            # e_cat, p_cat = init_e_cat, init_p_cat
             
              
             # cams_selected = [cam for cam in cams 
@@ -609,6 +637,7 @@ def main(cfg, args=None):
                 os.makedirs(export_path + '/images/' + str(epoch), exist_ok=True)
     
                 
+                
                 export_rendering_abs_path(rendering,export_path +'/images/'+ str(epoch) + '/' + cam.image_name +'.png')
                 
                 lambda_dssim = 0.6
@@ -622,10 +651,21 @@ def main(cfg, args=None):
                 
                     
                 cam_count = cam_count + 1
+                
+                total_weight = total_weight + cam_count
+                
+                
             
             
                 Ll1 = l1_loss(rendering, gt_image)
-                loss = loss + (1.0 - lambda_dssim) * Ll1 + lambda_dssim * (1.0 - ssim(rendering, gt_image)) 
+                
+                # if idx == 12:
+                
+                #     loss = loss + 6*((1.0 - lambda_dssim) * Ll1 + lambda_dssim * (1.0 - ssim(rendering, gt_image)))
+                # else:
+                
+                loss = loss + (1.0 - lambda_dssim) * Ll1 + lambda_dssim * (1.0 - ssim(rendering, gt_image))
+                
                     
             
             else:
@@ -635,6 +675,7 @@ def main(cfg, args=None):
                 export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
                 psnr_list.append(psnr(rendering, gt_image))
                 ssim_list.append(ssim(rendering, gt_image))
+                Ll1_list.append(l1_loss(rendering, gt_image))
                 
                 # evaluate([render_pos], [gt_pcds[idx]], 'CD')
                 # evaluate([render_pos], [gt_pcds[idx]], 'EMD')
@@ -658,7 +699,9 @@ def main(cfg, args=None):
                 # print("next_fid-fid:",next_fid-fid)
                 
                 # mpm step, using checkpoint to save memory
-                debug_tensor("F", F)
+                print("e_cat is None?", e_cat is None)
+                print("e_cat shape:", None if e_cat is None else e_cat.shape)
+                
                 stress = checkpoint(elasticity, F, e_cat)
                 
                 # stress = replace_inf_with_max(stress, name="stress")
@@ -687,17 +730,17 @@ def main(cfg, args=None):
                 F = F_mpm.to(device_material)
                 
                 
-                debug_tensor("x", x)
-                debug_tensor("x_mpm", x_mpm)
+                # debug_tensor("x", x)
+                # debug_tensor("x_mpm", x_mpm)
                 
-                debug_tensor("v", v)
-                debug_tensor("v_mpm", v_mpm)
+                # debug_tensor("v", v)
+                # debug_tensor("v_mpm", v_mpm)
                 
-                debug_tensor("F", F)
-                debug_tensor("F_mpm", F_mpm)
+                # debug_tensor("F", F)
+                # debug_tensor("F_mpm", F_mpm)
                 
-                debug_tensor("stress", stress)
-                debug_tensor("stress_mpm", stress_mpm)
+                # debug_tensor("stress", stress)
+                # debug_tensor("stress_mpm", stress_mpm)
 
                 
                 # assert torch.all(torch.isfinite(x))
@@ -713,9 +756,14 @@ def main(cfg, args=None):
         if train_params.enable_train:
         
             loss = loss/cam_count
+            
+            # e_cat.retain_grad()
+            
+            # loss = loss/total_weight
             print("loss:",loss)
             print("cam_count",cam_count)
             loss.backward()
+            # print(e_cat.grad.abs().sum(dim=1))  # 哪些粒子没有梯度？
             
             # convert non-finite gradients to zero
             
@@ -730,6 +778,7 @@ def main(cfg, args=None):
                 lr = material_opt.param_groups[0]['lr']
                 # f.write(f'epoch: {epoch}, idx: {idx}, loss: {loss}, lr: {lr}, e_cat: {e_cat.mean(dim=0).tolist()}, p_cat: {p_cat.mean(dim=0).tolist()}\n')
                 f.write(f'epoch: {epoch}, loss: {loss}, lr: {lr}, e_cat: {e_cat.mean(dim=0).tolist()}, p_cat: {p_cat.mean(dim=0).tolist()}\n')
+                f.write(f'epoch: {epoch}, loss: {loss}, e_cat_std: {e_cat.std(dim=0).tolist()}, p_cat_std: {p_cat.std(dim=0).tolist()}\n')
 
             # save_video_by_last_idx(f'{export_path}/images/'+ str(epoch),f'{export_path}/videos/video_{epoch:04d}.mp4')
             
@@ -758,8 +807,10 @@ def main(cfg, args=None):
             
             mean_psnr = torch.mean(torch.stack(psnr_list))
             mean_ssim = torch.mean(torch.stack(ssim_list)) 
+            mean_Ll1 = torch.mean(torch.stack(Ll1_list))
             print(f'average psnr: {mean_psnr}')
             print(f'average ssim: {mean_ssim}')
+            print(f'average Ll1: {mean_Ll1}')
             
             # cd = evaluate(pred_pcds, gt_pcds, 'CD')
             # emd = evaluate(pred_pcds, gt_pcds, 'EMD')
@@ -768,6 +819,7 @@ def main(cfg, args=None):
             test_log = {
                 "psnr": mean_psnr.item(),
                 "ssim": mean_ssim.item(),
+                
                 # "cd": cd,
                 # "emd": emd
             }

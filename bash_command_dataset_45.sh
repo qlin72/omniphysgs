@@ -1,16 +1,16 @@
-python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_01.yaml --tag dataset_45_01 --gt_video_folder /data/dataset_45_new/01
+# python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_01.yaml --tag dataset_45_01 --gt_video_folder /data/dataset_45_new/01
 python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_02.yaml --tag dataset_45_02 --gt_video_folder /data/dataset_45_new/02
 python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_03.yaml --tag dataset_45_03 --gt_video_folder /data/dataset_45_new/03
 python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_04.yaml --tag dataset_45_04 --gt_video_folder /data/dataset_45_new/04
 python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_05.yaml --tag dataset_45_05 --gt_video_folder /data/dataset_45_new/05
 python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_06.yaml --tag dataset_45_06 --gt_video_folder /data/dataset_45_new/06
-python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_07.yaml --tag dataset_45_07 --gt_video_folder /data/dataset_45_new/07
-# python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_08.yaml --tag dataset_45_08 --gt_video_folder /data/dataset_45_new/08
-# python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_09.yaml --tag dataset_45_09 --gt_video_folder /data/dataset_45_new/09
-# python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_12.yaml --tag dataset_45_12 --gt_video_folder /data/dataset_45_new/12
-# python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_13.yaml --tag dataset_45_13 --gt_video_folder /data/dataset_45_new/13
-# python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_14.yaml --tag dataset_45_14 --gt_video_folder /data/dataset_45_new/14
-# python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_15.yaml --tag dataset_45_15 --gt_video_folder /data/dataset_45_new/15
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_07.yaml --tag dataset_45_07 --gt_video_folder /data/dataset_45_new_0.01/07
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_08.yaml --tag dataset_45_08 --gt_video_folder /data/dataset_45_new/08
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_09.yaml --tag dataset_45_09 --gt_video_folder /data/dataset_45_new/09
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_12.yaml --tag dataset_45_12 --gt_video_folder /data/dataset_45_new/12
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_13.yaml --tag dataset_45_13 --gt_video_folder /data/dataset_45_new/13
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_14.yaml --tag dataset_45_14 --gt_video_folder /data/dataset_45_new/14
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_15.yaml --tag dataset_45_15 --gt_video_folder /data/dataset_45_new/15
 # python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_16.yaml --tag dataset_45_16 --gt_video_folder /data/dataset_45_new/16
 # python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_17.yaml --tag dataset_45_17 --gt_video_folder /data/dataset_45_new/17
 # python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_18.yaml --tag dataset_45_18 --gt_video_folder /data/dataset_45_new/18

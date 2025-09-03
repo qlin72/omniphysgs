@@ -10,8 +10,8 @@ class SigmaElasticity(Elasticity):
     def __init__(self) -> None:
         super().__init__()
 
-        self.register_buffer('log_E', torch.Tensor([2.0e6]).log())
-        self.register_buffer('nu', torch.Tensor([0.4]))
+        self.register_buffer('log_E', torch.Tensor([5.0e4]).log())
+        self.register_buffer('nu', torch.Tensor([0.25]))
 
 
     def forward(self, F: Tensor, log_E: Optional[Tensor]=None, nu: Optional[Tensor]=None) -> Tensor:
@@ -45,8 +45,8 @@ class CorotatedElasticity(Elasticity):
     def __init__(self) -> None:
         super().__init__()
 
-        self.register_buffer('log_E', torch.Tensor([2.0e6]).log())
-        self.register_buffer('nu', torch.Tensor([0.4]))
+        self.register_buffer('log_E', torch.Tensor([5.0e4]).log())
+        self.register_buffer('nu', torch.Tensor([0.25]))
 
 
     def forward(self, F: Tensor, log_E: Optional[Tensor]=None, nu: Optional[Tensor]=None) -> Tensor:

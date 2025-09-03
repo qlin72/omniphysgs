@@ -10,9 +10,9 @@ class DruckerPragerPlasticity(Plasticity):
     def __init__(self) -> None:
         super().__init__()
 
-        self.register_buffer('log_E', torch.Tensor([2.0e6]).log())
-        self.register_buffer('nu', torch.Tensor([0.4]))
-        self.register_buffer('friction_angle', torch.Tensor([25.0]))
+        self.register_buffer('log_E', torch.Tensor([5.0e4]).log())
+        self.register_buffer('nu', torch.Tensor([0.25]))
+        self.register_buffer('friction_angle', torch.Tensor([45.0]))
         self.register_buffer('cohesion', torch.Tensor([0.0]))
 
 
@@ -89,8 +89,8 @@ class VonMisesPlasticity(Plasticity):
     def __init__(self) -> None:
         super().__init__()
 
-        self.register_buffer('log_E', torch.Tensor([2.0e6]).log())
-        self.register_buffer('nu', torch.Tensor([0.4]))
+        self.register_buffer('log_E', torch.Tensor([5.0e4]).log())
+        self.register_buffer('nu', torch.Tensor([0.25]))
         self.register_buffer('sigma_y', torch.Tensor([1.0e3]))
 
 

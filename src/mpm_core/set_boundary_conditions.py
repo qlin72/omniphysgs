@@ -406,7 +406,7 @@ def add_surface_collider(
         point: list,
         normal: list,
         surface: str="sticky",
-        friction: float=0.0,
+        friction: float=1.0,
         start_time: float=0.0,
         end_time: float=999.0,
     ):
@@ -438,7 +438,24 @@ def add_surface_collider(
                     model.grid_mv[target] = model.grid_mv[target] - normal * torch.sum(model.grid_mv[target] * normal, dim=1, keepdim=True)
                 elif surface == "collide":
                     # set the vertical velocity to be opposite
-                    model.grid_mv[target] = model.grid_mv[target] - normal * 1.3 * torch.sum(model.grid_mv[target] * normal, dim=1, keepdim=True)
+                    # model.grid_mv[target] = model.grid_mv[target] - normal * 1.3 * torch.sum(model.grid_mv[target] * normal, dim=1, keepdim=True)
+                    v = model.grid_mv[target]                                # [N, 3], 当前格点速度
+
+                    # 法向分量提取
+                    v_n = torch.sum(v * normal, dim=1, keepdim=True)         # [N, 1], 法向速度大小
+                    penetrating = v_n > 0                                    # bool mask, 是否穿透
+                    v_n_clamped = torch.where(penetrating, v_n, torch.zeros_like(v_n))  # 仅保留指向边界内的速度
+                    v_normal = normal * v_n_clamped                          # [N, 3], 被允许的法向分量（负值方向）
+
+                    # 切向分量处理（摩擦）
+                    v_normal_full = normal * v_n                             # 法向部分（不管正负）
+                    v_tangent = v - v_normal_full                            # 真正的切向分量（v 去掉法向部分）
+                    v_tangent_scaled = v_tangent * (1.0 - friction)          # 摩擦系数缩放
+
+                    # 合成最终速度
+                    model.grid_mv[target] = v_tangent_scaled + v_normal      # 切向摩擦 + 限制法向
+                    
+                    
                 else:
                     raise TypeError("Undefined surface type")
         model.post_grid_process.append(
