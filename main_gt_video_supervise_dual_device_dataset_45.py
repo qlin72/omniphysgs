@@ -309,7 +309,7 @@ def main(cfg, args=None):
             material,
             ckpt_dir=os.path.join(export_path, 'checkpoints'),
             # epoch=train_params.ckpt_epoch,
-            epoch = 19,
+            epoch = 4,
             device=torch_device,
         )
         print('\nTraining is disabled.')
@@ -348,6 +348,29 @@ def main(cfg, args=None):
     init_p_cat[n1:, 1] = 1  # [0, 1, 0, 0]
     
     
+    train_psnr_list = []
+    train_ssim_list = []
+    train_Ll1_list = []
+    
+    test_psnr_list = []
+    test_ssim_list = []
+    test_Ll1_list = []
+    
+    train_pcds = []
+    train_gt_pcds = []
+    
+    test_pcds = []
+    test_gt_pcds = []
+
+    gt_pcds = []
+    
+    if not train_params.enable_train:
+        gt_pcds = load_gt_pcds(args.gt_ply_folder)
+    
+    
+    
+    
+    
     
 
     
@@ -362,7 +385,6 @@ def main(cfg, args=None):
         else:
             e_cat, p_cat = init_e_cat, init_p_cat
             
-        pred_pcds = []
         
         epoch = -1
         
@@ -421,7 +443,7 @@ def main(cfg, args=None):
             os.makedirs(export_path + '/plys', exist_ok=True)
             particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
             
-            pred_pcds.append(render_pos)
+            
             
             # if(epoch == 9):
             gt_image = cur_cam.original_image   
@@ -445,8 +467,17 @@ def main(cfg, args=None):
                 export_rendering_abs_path(rendering,export_path +'/images/eval_' + str(cam.uid) + '/' + cam.image_name +'.png')
                 export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
                 
-                # evaluate([render_pos], [gt_pcds[idx]], 'CD')
-                # evaluate([render_pos], [gt_pcds[idx]], 'EMD')
+                
+                
+                
+                train_pcds.append(render_pos)
+                train_gt_pcds.append(gt_pcds[idx])
+                
+                train_psnr_list.append(psnr(rendering, gt_image))
+                train_ssim_list.append(ssim(rendering, gt_image))
+                train_Ll1_list.append(l1_loss(rendering, gt_image))
+                
+                
                 
                 
             # mpm step
@@ -489,7 +520,6 @@ def main(cfg, args=None):
 
 
     
-    # gt_pcds = load_gt_pcds(args.gt_ply_folder)
    
     
     for epoch in range(start_epoch, epochs):
@@ -529,16 +559,7 @@ def main(cfg, args=None):
         save_gt_image = True
                 
                 
-        psnr_list = []
-        ssim_list = []
-        Ll1_list = []
         
-        
-        
-        # for pcd in gt_pcds:
-        #     print(pcd.shape)
-        
-        pred_pcds = []
         
         trans_pos = trans_pos.detach().requires_grad_(requires_grad)
         trans_cov = trans_cov.detach().requires_grad_(requires_grad)
@@ -548,7 +569,7 @@ def main(cfg, args=None):
             
         
         # for idx in range(num_skip_frames,len(sorted_fids)):
-        for idx in range(num_skip_frames,13):
+        for idx in range(num_skip_frames,30):
             
             
             # if idx % 1 == 0:
@@ -627,7 +648,7 @@ def main(cfg, args=None):
             os.makedirs(export_path + '/plys', exist_ok=True)
             particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
             
-            pred_pcds.append(render_pos)
+            
             
             # if(epoch == 9):
             gt_image = cur_cam.original_image   
@@ -673,12 +694,20 @@ def main(cfg, args=None):
                 os.makedirs(export_path + '/images/eval_gt_' + str(cam.uid), exist_ok=True)
                 export_rendering_abs_path(rendering,export_path +'/images/eval_' + str(cam.uid) + '/' + cam.image_name +'.png')
                 export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
-                psnr_list.append(psnr(rendering, gt_image))
-                ssim_list.append(ssim(rendering, gt_image))
-                Ll1_list.append(l1_loss(rendering, gt_image))
-                
-                # evaluate([render_pos], [gt_pcds[idx]], 'CD')
-                # evaluate([render_pos], [gt_pcds[idx]], 'EMD')
+                if idx < 20:
+                    train_pcds.append(render_pos)
+                    train_gt_pcds.append(gt_pcds[idx])
+                    
+                    train_psnr_list.append(psnr(rendering, gt_image))
+                    train_ssim_list.append(ssim(rendering, gt_image))
+                    train_Ll1_list.append(l1_loss(rendering, gt_image))
+                else:
+                    test_pcds.append(render_pos)
+                    test_gt_pcds.append(gt_pcds[idx])
+                    
+                    test_psnr_list.append(psnr(rendering, gt_image))
+                    test_ssim_list.append(ssim(rendering, gt_image))
+                    test_Ll1_list.append(l1_loss(rendering, gt_image))
                 
             
             
@@ -699,8 +728,8 @@ def main(cfg, args=None):
                 # print("next_fid-fid:",next_fid-fid)
                 
                 # mpm step, using checkpoint to save memory
-                print("e_cat is None?", e_cat is None)
-                print("e_cat shape:", None if e_cat is None else e_cat.shape)
+                # print("e_cat is None?", e_cat is None)
+                # print("e_cat shape:", None if e_cat is None else e_cat.shape)
                 
                 stress = checkpoint(elasticity, F, e_cat)
                 
@@ -791,7 +820,7 @@ def main(cfg, args=None):
             # F_ckpt = F.detach()
             # time_ckpt = mpm_model.time
             
-            if (epoch+1) % 10 == 0 or epoch == 0:
+            if (epoch+1) % 5 == 0 or epoch == 0:
                 save_material_checkpoint(
                     material,
                     material_opt,
@@ -805,23 +834,45 @@ def main(cfg, args=None):
         
             save_video_by_last_idx(f'{export_path}'+'/images/eval_gt_'+ str(test_camera_id),f'{export_path}'+'/videos/gt_video_'+str(test_camera_id)+'.mp4')
             
-            mean_psnr = torch.mean(torch.stack(psnr_list))
-            mean_ssim = torch.mean(torch.stack(ssim_list)) 
-            mean_Ll1 = torch.mean(torch.stack(Ll1_list))
-            print(f'average psnr: {mean_psnr}')
-            print(f'average ssim: {mean_ssim}')
-            print(f'average Ll1: {mean_Ll1}')
+            train_mean_psnr = torch.mean(torch.stack(train_psnr_list))
+            train_mean_ssim = torch.mean(torch.stack(train_ssim_list)) 
+            train_mean_Ll1 = torch.mean(torch.stack(train_Ll1_list))
+            train_cd = evaluate(train_pcds, train_gt_pcds, 'CD')
+            train_emd = evaluate(train_pcds, train_gt_pcds, 'EMD')
+            print(f'average train psnr: {train_mean_psnr}')
+            print(f'average train ssim: {train_mean_ssim}')
+            print(f'average train Ll1: {train_mean_Ll1}')
+            print(f'average train cd: {train_cd}')
+            print(f'average train emd: {train_emd}')
             
-            # cd = evaluate(pred_pcds, gt_pcds, 'CD')
-            # emd = evaluate(pred_pcds, gt_pcds, 'EMD')
+            
+            test_mean_psnr = torch.mean(torch.stack(test_psnr_list))
+            test_mean_ssim = torch.mean(torch.stack(test_ssim_list)) 
+            test_mean_Ll1 = torch.mean(torch.stack(test_Ll1_list))
+            test_cd = evaluate(test_pcds, test_gt_pcds, 'CD')
+            test_emd = evaluate(test_pcds, test_gt_pcds, 'EMD')
+            print(f'average test psnr: {test_mean_psnr}')
+            print(f'average test ssim: {test_mean_ssim}')
+            print(f'average test Ll1: {test_mean_Ll1}')
+            print(f'average test cd: {test_cd}')
+            print(f'average test emd: {test_emd}')
+          
+            
             
             
             test_log = {
-                "psnr": mean_psnr.item(),
-                "ssim": mean_ssim.item(),
+                "train psnr": train_mean_psnr.item(),
+                "train ssim": train_mean_ssim.item(),
                 
-                # "cd": cd,
-                # "emd": emd
+                "train cd": train_cd,
+                "train emd": train_emd,
+                
+                "test psnr": test_mean_psnr.item(),
+                "test ssim": test_mean_ssim.item(),
+                
+                "test cd": test_cd,
+                "test emd": test_emd,
+                
             }
 
             # 写入 test_log.json

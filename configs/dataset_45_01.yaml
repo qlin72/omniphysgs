@@ -4,7 +4,7 @@ train:
   model_path: 'dataset/dataset_45_new/01'
   export_path: './outputs'
   train_tag: 
-  epochs: 100
+  epochs: 5
   internal_epochs: 30
   enable_train: True
   learning_rate: 0.0005
@@ -30,15 +30,15 @@ material:
   size: [1.0, 1.0, 1.0]
   rho: 1000.0
   elasticity_physicals:
-    # - 'CorotatedElasticity'
+    - 'CorotatedElasticity'
     # - 'StVKElasticity'
     - 'SigmaElasticity'
     # - 'VolumeElasticity'
   plasticity_physicals:
-    # - 'IdentityPlasticity'
-    # - 'DruckerPragerPlasticity'
+    - 'IdentityPlasticity'
+    - 'DruckerPragerPlasticity'
     - 'SigmaPlasticity'
-    # - 'VonMisesPlasticity'
+    - 'VonMisesPlasticity'
     # For saving GPU memory. May need to balance label when uncommenting. 
   elasticity: 'neural'
   plasticity: 'neural'
@@ -79,7 +79,7 @@ sim:
     - type: 'surface_collider'
       point: [0.0, 0.25, 0.0]
       normal: [0.0, 1.0, 0.0]
-      surface: 'collide'
+      surface: 'sticky'
       friction: 0.0
       start_time: 0.0
       end_time: 1e3

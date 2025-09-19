@@ -1,4 +1,4 @@
-python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_01.yaml --tag dataset_45_01 --gt_video_folder /data/dataset_45_new/01
+python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_01.yaml --tag dataset_45_01 --gt_video_folder /data/dataset_45_new/01 --gt_ply_folder /data/dataset_45_gt_pcds/01 --test
 python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_02.yaml --tag dataset_45_02 --gt_video_folder /data/dataset_45_new/02
 python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_03.yaml --tag dataset_45_03 --gt_video_folder /data/dataset_45_new/03
 python main_gt_video_supervise_dual_device_dataset_45.py --config configs/dataset_45_04.yaml --tag dataset_45_04 --gt_video_folder /data/dataset_45_new/04
