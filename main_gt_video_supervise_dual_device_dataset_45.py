@@ -124,6 +124,8 @@ def main(cfg, args=None):
     # ====== 这里开始计时 ======
     total_start_time = time.time()
     # =========================
+    # ===== Reset CUDA memory stats for device_material =====
+    torch.cuda.reset_peak_memory_stats(device_material)
 
     
     
@@ -812,45 +814,29 @@ def main(cfg, args=None):
                 
                 # if(idx < 0):
                 
-                # x, v, C, F = checkpoint(mpm_model, x, v, C, F, stress)
+                x, v, C, F = checkpoint(mpm_model, x, v, C, F, stress)
 
                 # else:
-                x_mpm = x.to(device_mpm)
-                v_mpm = v.to(device_mpm)
-                C_mpm = C.to(device_mpm)
-                F_mpm = F.to(device_mpm)
-                stress_mpm = stress.to(device_mpm)
+                # x_mpm = x.to(device_mpm)
+                # v_mpm = v.to(device_mpm)
+                # C_mpm = C.to(device_mpm)
+                # F_mpm = F.to(device_mpm)
+                # stress_mpm = stress.to(device_mpm)
 
             
-                x_mpm, v_mpm, C_mpm, F_mpm = checkpoint(mpm_model_copy, x_mpm, v_mpm, C_mpm, F_mpm, stress_mpm)
+                # x_mpm, v_mpm, C_mpm, F_mpm = checkpoint(mpm_model_copy, x_mpm, v_mpm, C_mpm, F_mpm, stress_mpm)
 
-                x = x_mpm.to(device_material)
-                v = v_mpm.to(device_material)
-                C = C_mpm.to(device_material)
-                F = F_mpm.to(device_material)
+                # x = x_mpm.to(device_material)
+                # v = v_mpm.to(device_material)
+                # C = C_mpm.to(device_material)
+                # F = F_mpm.to(device_material)
                 
                 
-                # debug_tensor("x", x)
-                # debug_tensor("x_mpm", x_mpm)
-                
-                # debug_tensor("v", v)
-                # debug_tensor("v_mpm", v_mpm)
-                
-                # debug_tensor("F", F)
-                # debug_tensor("F_mpm", F_mpm)
-                
-                # debug_tensor("stress", stress)
-                # debug_tensor("stress_mpm", stress_mpm)
-
-                
-                # assert torch.all(torch.isfinite(x))
                 
                 F = checkpoint(plasticity, F, p_cat)
-                # F = replace_inf_with_max(F, name="F")
                 
                 assert torch.all(torch.isfinite(F))    
         
-                # if (idx+1) % 1 == 0 or idx == len(sorted_fids) - 1:
                     
             
         if train_params.enable_train:
@@ -958,14 +944,32 @@ def main(cfg, args=None):
     # ====== 训练全过程计时结束 ======
     
     # 确保两个 GPU 上的 CUDA 任务都完成
-    try:
-        torch.cuda.synchronize(device_material)
-        torch.cuda.synchronize(device_mpm)
-    except Exception as e:
-        print("[WARN] cuda synchronize failed:", e)
+    # try:
+    #     torch.cuda.synchronize(device_material)
+    #     torch.cuda.synchronize(device_mpm)
+    # except Exception as e:
+    #     print("[WARN] cuda synchronize failed:", e)
 
     total_end_time = time.time()
     total_elapsed = total_end_time - total_start_time
+
+    # ===== Memory Stats for device_material (cuda:0) =====
+    stats = torch.cuda.memory_stats(device_material)
+
+    allocated = stats["allocated_bytes.all.current"]      # 当前使用
+    peak_allocated = stats["allocated_bytes.all.peak"]    # 峰值使用
+    reserved = stats["reserved_bytes.all.current"]        # 当前保留
+    peak_reserved = stats["reserved_bytes.all.peak"]      # 峰值保留
+
+    GB = 1024**3
+
+    avg_memory = allocated / GB
+    peak_memory = peak_allocated / GB
+    avg_reserved = reserved / GB
+    peak_reserved = peak_reserved / GB
+
+
+
     print(f"\n[Timing] Total training time: {total_elapsed:.2f} seconds "
         f"({total_elapsed/60:.2f} minutes, {total_elapsed/3600:.2f} hours)")
     
@@ -984,7 +988,12 @@ def main(cfg, args=None):
             f"Total training time: {total_elapsed:.2f} seconds "
             f"({total_elapsed/60:.2f} minutes, {total_elapsed/3600:.2f} hours)\n"
         )
-              
+        f.write("===== GPU MEMORY STATS (device_material: cuda:0) =====\n")
+        f.write(f"  Avg allocated: {avg_memory:.4f} GB\n")
+        f.write(f"  Peak allocated: {peak_memory:.4f} GB\n")
+        f.write(f"  Avg reserved: {avg_reserved:.4f} GB\n")
+        f.write(f"  Peak reserved: {peak_reserved:.4f} GB\n")
+                
             
                 
             
