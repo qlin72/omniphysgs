@@ -4,7 +4,7 @@ train:
   model_path: 'dataset/dataset_45_new/01'
   export_path: './outputs'
   train_tag: 
-  epochs: 5
+  epochs: 25
   internal_epochs: 30
   enable_train: True
   learning_rate: 0.0005

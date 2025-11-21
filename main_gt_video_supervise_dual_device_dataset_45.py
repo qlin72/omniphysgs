@@ -28,6 +28,9 @@ from src.gt_video_utils.loss import *
 
 import copy
 
+
+
+
 def replace_inf_with_max(tensor: torch.Tensor, name="tensor"):
     if not torch.all(torch.isfinite(tensor)):
         finite_mask = torch.isfinite(tensor)
@@ -117,6 +120,10 @@ def main(cfg, args=None):
 
     device_material = torch.device("cuda:0")
     device_mpm = torch.device("cuda:1")
+    
+    # ====== 这里开始计时 ======
+    total_start_time = time.time()
+    # =========================
 
     
     
@@ -160,8 +167,8 @@ def main(cfg, args=None):
         
     else:
         
-        fid_to_cams, sorted_fids = group_cameras_by_time(test_cams)
-         
+        fid_to_cams, sorted_fids = group_cameras_by_time(test_cams + train_cams)
+          
     
 
     # init training
@@ -401,57 +408,52 @@ def main(cfg, args=None):
             cams = fid_to_cams[fid]
             
             
-            
-            cam = random.choice(cams)
-            # for cam in cams_selected:
-            # cam =  cams[4]
-            # print(cam.image)
-            
-            # render
-            frame_id = cam.uid
-            print(cam.image_name)
-            
-            fid = sorted_fids[idx]
-            
-            cur_cam = loadCam(cam,1.0)
-            
-            # get rendering params
-            (
-                render_pos,
-                render_cov,
-                render_shs,
-                render_opacity,
-                render_rot
-            ) = get_mpm_gaussian_params(
-                pos=x, cov=trans_cov, shs=trans_shs, opacity=trans_opacity,
-                F=F,
-                unselected_params=unselected_params,
-                rotation_matrices=rotation_matrices,
-                scale_origin=scale_origin,
-                original_mean_pos=original_mean_pos
-            )
-            
-            rendering = render_mpm_gaussian_with_gt_camera_info(
-                pipeline=pipeline,
-                gaussians=gaussians,background=background, 
-                pos=render_pos, cov=render_cov,shs=render_shs, opacity=render_opacity, rot=render_rot,
-                screen_points=screen_points,
-                camera_info = cam,
-                logits=None
-            )
-            # if not train_params.enable_train:
-            os.makedirs(export_path + '/plys', exist_ok=True)
-            particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
-            
-            
-            
-            # if(epoch == 9):
-            gt_image = cur_cam.original_image   
-            
             if train_params.enable_train:
+            
+            
+                cam = random.choice(cams)
+                print(cam.image_name)
                 
+                
+                cur_cam = loadCam(cam,1.0)
+                
+                # get rendering params
+                (
+                    render_pos,
+                    render_cov,
+                    render_shs,
+                    render_opacity,
+                    render_rot
+                ) = get_mpm_gaussian_params(
+                    pos=x, cov=trans_cov, shs=trans_shs, opacity=trans_opacity,
+                    F=F,
+                    unselected_params=unselected_params,
+                    rotation_matrices=rotation_matrices,
+                    scale_origin=scale_origin,
+                    original_mean_pos=original_mean_pos
+                )
+                
+                rendering = render_mpm_gaussian_with_gt_camera_info(
+                    pipeline=pipeline,
+                    gaussians=gaussians,background=background, 
+                    pos=render_pos, cov=render_cov,shs=render_shs, opacity=render_opacity, rot=render_rot,
+                    screen_points=screen_points,
+                    camera_info = cam,
+                    logits=None
+                )
+                # if not train_params.enable_train:
+                os.makedirs(export_path + '/plys', exist_ok=True)
+                particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
+                
+                
+                
+                # if(epoch == 9):
+                gt_image = cur_cam.original_image   
+                
+                
+                    
                 os.makedirs(export_path + '/images/' + str(epoch), exist_ok=True)
-    
+
                 
                 export_rendering_abs_path(rendering,export_path +'/images/'+ str(epoch) + '/' + cam.image_name +'.png')
                 
@@ -462,20 +464,55 @@ def main(cfg, args=None):
                 
             
             else:
-                os.makedirs(export_path + '/images/eval_' + str(cam.uid), exist_ok=True)
-                os.makedirs(export_path + '/images/eval_gt_' + str(cam.uid), exist_ok=True)
-                export_rendering_abs_path(rendering,export_path +'/images/eval_' + str(cam.uid) + '/' + cam.image_name +'.png')
-                export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
                 
+                for cam in cams:
+                    
+                    cur_cam = loadCam(cam,1.0)
                 
+                    # get rendering params
+                    (
+                        render_pos,
+                        render_cov,
+                        render_shs,
+                        render_opacity,
+                        render_rot
+                    ) = get_mpm_gaussian_params(
+                        pos=x, cov=trans_cov, shs=trans_shs, opacity=trans_opacity,
+                        F=F,
+                        unselected_params=unselected_params,
+                        rotation_matrices=rotation_matrices,
+                        scale_origin=scale_origin,
+                        original_mean_pos=original_mean_pos
+                    )
+                    
+                    rendering = render_mpm_gaussian_with_gt_camera_info(
+                        pipeline=pipeline,
+                        gaussians=gaussians,background=background, 
+                        pos=render_pos, cov=render_cov,shs=render_shs, opacity=render_opacity, rot=render_rot,
+                        screen_points=screen_points,
+                        camera_info = cam,
+                        logits=None
+                    )
+                    
+                    gt_image = cur_cam.original_image 
+                    
+        
                 
-                
+                    os.makedirs(export_path + '/images/eval_' + str(cam.uid), exist_ok=True)
+                    os.makedirs(export_path + '/images/eval_gt_' + str(cam.uid), exist_ok=True)
+                    export_rendering_abs_path(rendering,export_path +'/images/eval_' + str(cam.uid) + '/' + cam.image_name +'.png')
+                    export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
+                    
+        
+                    train_psnr_list.append(psnr(rendering, gt_image))
+                    train_ssim_list.append(ssim(rendering, gt_image))
+                    train_Ll1_list.append(l1_loss(rendering, gt_image))
+                    
                 train_pcds.append(render_pos)
                 train_gt_pcds.append(gt_pcds[idx])
                 
-                train_psnr_list.append(psnr(rendering, gt_image))
-                train_ssim_list.append(ssim(rendering, gt_image))
-                train_Ll1_list.append(l1_loss(rendering, gt_image))
+                os.makedirs(export_path + '/plys', exist_ok=True)
+                particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
                 
                 
                 
@@ -569,7 +606,7 @@ def main(cfg, args=None):
             
         
         # for idx in range(num_skip_frames,len(sorted_fids)):
-        for idx in range(num_skip_frames,30):
+        for idx in range(num_skip_frames,14):
             
             
             # if idx % 1 == 0:
@@ -605,55 +642,51 @@ def main(cfg, args=None):
             else:
                 e_cat, p_cat = init_e_cat, init_p_cat
                 
-            # e_cat, p_cat = init_e_cat, init_p_cat
-            
-             
-            # cams_selected = [cam for cam in cams 
-            # if int(cam.image_name.split('_')[1]) == rand_num]
-            
-            cam = random.choice(cams)
-            # cam = cams[4]
-            
-            # render
-            frame_id = cam.uid
-            print(cam.image_name)
-            
-            cur_cam = loadCam(cam,1.0)
-            
-            # get rendering params
-            (
-                render_pos,
-                render_cov,
-                render_shs,
-                render_opacity,
-                render_rot
-            ) = get_mpm_gaussian_params(
-                pos=x, cov=trans_cov, shs=trans_shs, opacity=trans_opacity,
-                F=F,
-                unselected_params=unselected_params,
-                rotation_matrices=rotation_matrices,
-                scale_origin=scale_origin,
-                original_mean_pos=original_mean_pos
-            )
-            
-            rendering = render_mpm_gaussian_with_gt_camera_info(
-                pipeline=pipeline,
-                gaussians=gaussians,background=background, 
-                pos=render_pos, cov=render_cov,shs=render_shs, opacity=render_opacity, rot=render_rot,
-                screen_points=screen_points,
-                camera_info = cam,
-                logits=None
-            )
-            # if not train_params.enable_train:
-            os.makedirs(export_path + '/plys', exist_ok=True)
-            particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
-            
-            
-            
-            # if(epoch == 9):
-            gt_image = cur_cam.original_image   
-            
             if train_params.enable_train:
+            
+                cam = random.choice(cams)
+                # cam = cams[4]
+                
+                # render
+                frame_id = cam.uid
+                print(cam.image_name)
+                
+                cur_cam = loadCam(cam,1.0)
+                
+                # get rendering params
+                (
+                    render_pos,
+                    render_cov,
+                    render_shs,
+                    render_opacity,
+                    render_rot
+                ) = get_mpm_gaussian_params(
+                    pos=x, cov=trans_cov, shs=trans_shs, opacity=trans_opacity,
+                    F=F,
+                    unselected_params=unselected_params,
+                    rotation_matrices=rotation_matrices,
+                    scale_origin=scale_origin,
+                    original_mean_pos=original_mean_pos
+                )
+                
+                rendering = render_mpm_gaussian_with_gt_camera_info(
+                    pipeline=pipeline,
+                    gaussians=gaussians,background=background, 
+                    pos=render_pos, cov=render_cov,shs=render_shs, opacity=render_opacity, rot=render_rot,
+                    screen_points=screen_points,
+                    camera_info = cam,
+                    logits=None
+                )
+                # if not train_params.enable_train:
+                os.makedirs(export_path + '/plys', exist_ok=True)
+                particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
+                
+                
+                
+                # if(epoch == 9):
+                gt_image = cur_cam.original_image   
+            
+            
                 
                 os.makedirs(export_path + '/images/' + str(epoch), exist_ok=True)
     
@@ -690,25 +723,63 @@ def main(cfg, args=None):
                     
             
             else:
-                os.makedirs(export_path + '/images/eval_' + str(cam.uid), exist_ok=True)
-                os.makedirs(export_path + '/images/eval_gt_' + str(cam.uid), exist_ok=True)
-                export_rendering_abs_path(rendering,export_path +'/images/eval_' + str(cam.uid) + '/' + cam.image_name +'.png')
-                export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
-                if idx < 20:
-                    train_pcds.append(render_pos)
-                    train_gt_pcds.append(gt_pcds[idx])
-                    
-                    train_psnr_list.append(psnr(rendering, gt_image))
-                    train_ssim_list.append(ssim(rendering, gt_image))
-                    train_Ll1_list.append(l1_loss(rendering, gt_image))
-                else:
-                    test_pcds.append(render_pos)
-                    test_gt_pcds.append(gt_pcds[idx])
-                    
-                    test_psnr_list.append(psnr(rendering, gt_image))
-                    test_ssim_list.append(ssim(rendering, gt_image))
-                    test_Ll1_list.append(l1_loss(rendering, gt_image))
                 
+                
+                
+                
+                for cam in cams:
+                    
+                    cur_cam = loadCam(cam,1.0)
+                
+                    # get rendering params
+                    (
+                        render_pos,
+                        render_cov,
+                        render_shs,
+                        render_opacity,
+                        render_rot
+                    ) = get_mpm_gaussian_params(
+                        pos=x, cov=trans_cov, shs=trans_shs, opacity=trans_opacity,
+                        F=F,
+                        unselected_params=unselected_params,
+                        rotation_matrices=rotation_matrices,
+                        scale_origin=scale_origin,
+                        original_mean_pos=original_mean_pos
+                    )
+                    
+                    rendering = render_mpm_gaussian_with_gt_camera_info(
+                        pipeline=pipeline,
+                        gaussians=gaussians,background=background, 
+                        pos=render_pos, cov=render_cov,shs=render_shs, opacity=render_opacity, rot=render_rot,
+                        screen_points=screen_points,
+                        camera_info = cam,
+                        logits=None
+                    )
+                    
+                    gt_image = cur_cam.original_image 
+
+                    os.makedirs(export_path + '/images/eval_' + str(cam.uid), exist_ok=True)
+                    os.makedirs(export_path + '/images/eval_gt_' + str(cam.uid), exist_ok=True)
+                    export_rendering_abs_path(rendering,export_path +'/images/eval_' + str(cam.uid) + '/' + cam.image_name +'.png')
+                    export_rendering_abs_path(gt_image,export_path + '/images/eval_gt_' + str(cam.uid) + '/' + cam.image_name +'.png') 
+                    # if idx < 20:
+                    #     train_psnr_list.append(psnr(rendering, gt_image))
+                    #     train_ssim_list.append(ssim(rendering, gt_image))
+                    #     train_Ll1_list.append(l1_loss(rendering, gt_image))
+                    # else:
+                    #     test_psnr_list.append(psnr(rendering, gt_image))
+                    #     test_ssim_list.append(ssim(rendering, gt_image))
+                    #     test_Ll1_list.append(l1_loss(rendering, gt_image))
+                        
+                # if idx < 20:
+                #     train_pcds.append(render_pos)
+                #     train_gt_pcds.append(gt_pcds[idx])
+                # else:
+                #     test_pcds.append(render_pos)
+                #     test_gt_pcds.append(gt_pcds[idx])
+                    
+                # os.makedirs(export_path + '/plys', exist_ok=True)
+                # particle_position_tensor_to_ply(render_pos,export_path +'/plys/'+ str(idx) + '.ply')
             
             
             def debug_tensor(name, t):
@@ -827,59 +898,93 @@ def main(cfg, args=None):
                     ckpt_dir=os.path.join(export_path, 'checkpoints'),
                     epoch=epoch
                 )
-        else:
+        # else:
             
-            save_video_by_last_idx(f'{export_path}'+'/images/eval_' + str(test_camera_id),f'{export_path}'+'/videos/video_'+str(test_camera_id)+'.mp4')
-            
+        #     for cam in cams:
         
-            save_video_by_last_idx(f'{export_path}'+'/images/eval_gt_'+ str(test_camera_id),f'{export_path}'+'/videos/gt_video_'+str(test_camera_id)+'.mp4')
+                # save_video_by_last_idx(f'{export_path}'+'/images/eval_' + str(cam.uid),f'{export_path}'+'/videos/video_'+str(cam.uid)+'.mp4')
+                
+                # save_video_by_last_idx(f'{export_path}'+'/images/eval_gt_'+ str(cam.uid),f'{export_path}'+'/videos/gt_video_'+str(cam.uid)+'.mp4')
             
-            train_mean_psnr = torch.mean(torch.stack(train_psnr_list))
-            train_mean_ssim = torch.mean(torch.stack(train_ssim_list)) 
-            train_mean_Ll1 = torch.mean(torch.stack(train_Ll1_list))
-            train_cd = evaluate(train_pcds, train_gt_pcds, 'CD')
-            train_emd = evaluate(train_pcds, train_gt_pcds, 'EMD')
-            print(f'average train psnr: {train_mean_psnr}')
-            print(f'average train ssim: {train_mean_ssim}')
-            print(f'average train Ll1: {train_mean_Ll1}')
-            print(f'average train cd: {train_cd}')
-            print(f'average train emd: {train_emd}')
+            # train_mean_psnr = torch.mean(torch.stack(train_psnr_list))
+            # train_mean_ssim = torch.mean(torch.stack(train_ssim_list)) 
+            # train_mean_Ll1 = torch.mean(torch.stack(train_Ll1_list))
+            # train_cd = evaluate(train_pcds, train_gt_pcds, 'CD')
+            # train_emd = evaluate(train_pcds, train_gt_pcds, 'EMD')
+            # print(len(train_psnr_list))
+            # print(f'average train psnr: {train_mean_psnr}')
+            # print(f'average train ssim: {train_mean_ssim}')
+            # print(f'average train Ll1: {train_mean_Ll1}')
+            # print(f'average train cd: {train_cd}')
+            # print(f'average train emd: {train_emd}')
             
             
-            test_mean_psnr = torch.mean(torch.stack(test_psnr_list))
-            test_mean_ssim = torch.mean(torch.stack(test_ssim_list)) 
-            test_mean_Ll1 = torch.mean(torch.stack(test_Ll1_list))
-            test_cd = evaluate(test_pcds, test_gt_pcds, 'CD')
-            test_emd = evaluate(test_pcds, test_gt_pcds, 'EMD')
-            print(f'average test psnr: {test_mean_psnr}')
-            print(f'average test ssim: {test_mean_ssim}')
-            print(f'average test Ll1: {test_mean_Ll1}')
-            print(f'average test cd: {test_cd}')
-            print(f'average test emd: {test_emd}')
+            # test_mean_psnr = torch.mean(torch.stack(test_psnr_list))
+            # test_mean_ssim = torch.mean(torch.stack(test_ssim_list)) 
+            # test_mean_Ll1 = torch.mean(torch.stack(test_Ll1_list))
+            # test_cd = evaluate(test_pcds, test_gt_pcds, 'CD')
+            # test_emd = evaluate(test_pcds, test_gt_pcds, 'EMD')
+            # print(len(test_psnr_list))
+            # print(f'average test psnr: {test_mean_psnr}')
+            # print(f'average test ssim: {test_mean_ssim}')
+            # print(f'average test Ll1: {test_mean_Ll1}')
+            # print(f'average test cd: {test_cd}')
+            # print(f'average test emd: {test_emd}')
           
             
             
             
-            test_log = {
-                "train psnr": train_mean_psnr.item(),
-                "train ssim": train_mean_ssim.item(),
+            # test_log = {
+            #     "train psnr": train_mean_psnr.item(),
+            #     "train ssim": train_mean_ssim.item(),
                 
-                "train cd": train_cd,
-                "train emd": train_emd,
+            #     "train cd": train_cd,
+            #     "train emd": train_emd,
                 
-                "test psnr": test_mean_psnr.item(),
-                "test ssim": test_mean_ssim.item(),
+            #     "test psnr": test_mean_psnr.item(),
+            #     "test ssim": test_mean_ssim.item(),
                 
-                "test cd": test_cd,
-                "test emd": test_emd,
+            #     "test cd": test_cd,
+            #     "test emd": test_emd,
                 
-            }
+            # }
 
-            # 写入 test_log.json
-            with open(export_path + "/test_log.json", "w") as f:
-                json.dump(test_log, f, indent=4)
+            # # 写入 test_log.json
+            # with open(export_path + "/test_log.json", "w") as f:
+            #     json.dump(test_log, f, indent=4)
 
-            print("Test log saved to test_log.json")
+            # print("Test log saved to test_log.json")
+        
+    # ====== 训练全过程计时结束 ======
+    
+    # 确保两个 GPU 上的 CUDA 任务都完成
+    try:
+        torch.cuda.synchronize(device_material)
+        torch.cuda.synchronize(device_mpm)
+    except Exception as e:
+        print("[WARN] cuda synchronize failed:", e)
+
+    total_end_time = time.time()
+    total_elapsed = total_end_time - total_start_time
+    print(f"\n[Timing] Total training time: {total_elapsed:.2f} seconds "
+        f"({total_elapsed/60:.2f} minutes, {total_elapsed/3600:.2f} hours)")
+    
+    
+    if train_params.enable_train:
+        
+        time_log_path = export_path + "/time_log.txt"
+    
+    else:
+         time_log_path = export_path + "/time_log_test.txt"
+        
+        
+    
+    with open(time_log_path, "a", encoding="utf-8") as f:
+        f.write(
+            f"Total training time: {total_elapsed:.2f} seconds "
+            f"({total_elapsed/60:.2f} minutes, {total_elapsed/3600:.2f} hours)\n"
+        )
+              
             
                 
             
